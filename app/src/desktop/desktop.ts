@@ -26,6 +26,12 @@ export interface RecoverySnapshot {
   content: string;
   savedAt: number;
 }
+export interface FileAssociationStatus {
+  registered: boolean;
+  current: boolean;
+  executablePath: string;
+  registeredExecutablePath: string | null;
+}
 export type ThemeMode = "system" | "light" | "dark";
 export interface DesktopSettings {
   theme: ThemeMode;
@@ -46,6 +52,7 @@ export const desktop = {
   },
   file: {
     clearCurrent: () => invoke<void>("file.clearCurrent"),
+    getLaunch: () => invoke<NativeDocument | null>("file.getLaunch"),
     open: () => invoke<NativeDocument | null>("file.open"),
     read: (path: string) => invoke<NativeDocument>("file.read", { path }),
     save: (path: string, content: string) =>
@@ -77,5 +84,11 @@ export const desktop = {
     save: (snapshot: Pick<RecoverySnapshot, "path" | "name" | "content">) =>
       invoke<void>("recovery.save", snapshot),
     clear: () => invoke<void>("recovery.clear"),
+  },
+  association: {
+    status: () => invoke<FileAssociationStatus>("association.status"),
+    register: () => invoke<void>("association.register"),
+    unregister: () => invoke<void>("association.unregister"),
+    openDefaultApps: () => invoke<void>("association.openDefaultApps"),
   },
 };

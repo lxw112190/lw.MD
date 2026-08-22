@@ -99,6 +99,11 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
   auto* state = reinterpret_cast<State*>(GetWindowLongPtrW(window, GWLP_USERDATA));
   switch (message) {
     case WM_CREATE: {
+      const auto* create = reinterpret_cast<CREATESTRUCTW*>(lparam);
+      const auto* launch_path = create
+                                    ? static_cast<const std::optional<std::wstring>*>(
+                                          create->lpCreateParams)
+                                    : nullptr;
       auto owned = std::make_unique<State>(); owned->webview = std::make_unique<WebViewHost>();
       auto* const webview = owned->webview.get();
       owned->bridge = std::make_unique<BridgeDispatcher>(
@@ -108,6 +113,9 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
             webview->ExportPdf(path, std::move(completion));
           },
           [webview](const std::wstring& path) { webview->SetDocumentFolder(path); });
+      if (launch_path && *launch_path) {
+        owned->bridge->SetLaunchDocumentPath(**launch_path);
+      }
       state = owned.release(); SetWindowLongPtrW(window, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(state));
       std::wstring folder;
       try { folder = FrontendContentPath(); }
@@ -164,7 +172,8 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
   } return DefWindowProcW(window, message, wparam, lparam);
 }
 }
-int RunMainWindow(HINSTANCE instance) {
+int RunMainWindow(HINSTANCE instance,
+                  const std::optional<std::wstring>& launch_path) {
   WNDCLASSEXW window_class{sizeof(window_class)}; window_class.lpfnWndProc = WindowProc; window_class.hInstance = instance; window_class.hCursor = LoadCursorW(nullptr, IDC_IBEAM); window_class.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1); window_class.lpszClassName = kClassName;
   window_class.hIcon = static_cast<HICON>(LoadImageW(
       instance, MAKEINTRESOURCEW(1), IMAGE_ICON, GetSystemMetrics(SM_CXICON),
@@ -182,7 +191,8 @@ int RunMainWindow(HINSTANCE instance) {
       restored ? restored->left : CW_USEDEFAULT,
       restored ? restored->top : CW_USEDEFAULT,
       restored ? restored->width : 1180, restored ? restored->height : 760,
-      nullptr, nullptr, instance, nullptr);
+      nullptr, nullptr, instance,
+      const_cast<std::optional<std::wstring>*>(&launch_path));
   if (!window) return 1;
   DragAcceptFiles(window, TRUE);
   ShowWindow(window, restored && restored->maximized ? SW_SHOWMAXIMIZED : SW_SHOW);

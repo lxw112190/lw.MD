@@ -10,6 +10,8 @@
 
 **lw.MD（简墨）** 是一个简洁、轻量、本地优先的 Windows Markdown 编辑器。项目使用 React、TypeScript、Vditor、C++17 和 WebView2 构建，最终以单个便携 EXE 分发。
 
+<img src="docs/assets/lw-md-editor.png" alt="lw.MD（简墨）主界面" width="960">
+
 ## 主要功能
 
 - Vditor IR 即时渲染 Markdown 编辑
@@ -21,6 +23,7 @@
 - 定时恢复快照，异常退出后可恢复未保存内容
 - A4 PDF 导出
 - 窗口位置、尺寸和最大化状态记忆
+- Windows 右键菜单、打开方式和默认应用设置集成
 - 前端资源完全离线，最终用户无需安装 Node.js
 - WebView2 原生桥接来源校验、导航限制和参数校验
 
@@ -29,7 +32,8 @@
 1. 从 [Releases](https://github.com/lxw112190/lw.MD/releases) 下载最新的 `lw.MD-windows-x64.zip`。
 2. 解压后运行 `lw.MD.exe`。
 3. 点击“打开”，或者将 Markdown 文件拖入窗口。
-4. 使用“文件 → 导出 PDF”生成 A4 PDF。
+4. 可在“文件 → Windows 集成…”中添加右键菜单和“打开方式”。
+5. 使用“文件 → 导出 PDF”生成 A4 PDF。
 
 运行环境：
 
@@ -68,6 +72,22 @@ CI 生成的 EXE 暂未进行商业代码签名，因此 Windows SmartScreen 首
 - 拖到编辑工作区：WebView2 只能读取文件内容，无法获得原始磁盘路径，因此会作为未保存文档载入，首次保存时需要选择位置。
 - 拖入或粘贴图片：保存文档后，图片会复制到 Markdown 同目录的 `assets` 文件夹，并自动插入相对路径。
 
+## Windows 集成
+
+打开“文件 → Windows 集成…”可以按需注册以下功能：
+
+- `.md` 和 `.markdown` 文件右键显示“使用 lw.MD 打开”。
+- Windows“打开方式”列表显示“lw.MD 简墨”。
+- 在系统默认应用设置中选择 lw.MD；程序不会自行抢占默认关联。
+
+所有信息仅写入当前用户注册表，不需要管理员权限。Windows 11 的传统右键命令可能显示在“显示更多选项”中。
+
+lw.MD 是便携软件。如果移动了 `lw.MD.exe`，集成窗口会显示“需要修复”，点击“修复关联”即可更新路径。也可以直接通过命令行打开带空格或中文路径的文档：
+
+```powershell
+.\lw.MD.exe "D:\文档\项目说明.md"
+```
+
 ## 从源码构建
 
 需要 Node.js 20.19+、CMake 3.22+、Visual Studio 2022 和 Windows SDK。
@@ -93,8 +113,8 @@ build\Release\lw.MD.exe
 项目代码主要位于：
 
 - `app/`：React、TypeScript 和 Vditor 前端
-- `native/`：C++17、WebView2 宿主、文件桥接和恢复服务
-- `tests/`：原生文件与恢复测试
+- `native/`：C++17、WebView2 宿主、文件桥接、恢复服务和 Windows 集成
+- `tests/`：原生文件、恢复、启动参数和隔离注册表测试
 - `.github/workflows/`：Windows CI 和自动发布流程
 
 ## CI 与发布
@@ -104,11 +124,11 @@ build\Release\lw.MD.exe
 推送与项目版本一致的 `v*` 标签后，CI 会自动创建 GitHub Release，并上传便携 ZIP 和 SHA-256 校验文件：
 
 ```powershell
-git tag -a v0.3.0 -m "lw.MD v0.3.0"
-git push origin v0.3.0
+git tag -a v0.3.1 -m "lw.MD v0.3.1"
+git push origin v0.3.1
 ```
 
-使用 `v0.3.0-beta.1`、`v0.3.0-rc.1` 等带后缀的标签时，会自动发布为 GitHub Pre-release。
+使用 `v0.3.1-beta.1`、`v0.3.1-rc.1` 等带后缀的标签时，会自动发布为 GitHub Pre-release。
 
 如需本地调试 WebView2，可在启动前设置 `LWMD_ENABLE_DEVTOOLS=1`；正式构建默认禁用开发者工具。
 

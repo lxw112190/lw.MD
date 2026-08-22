@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(lw_MD VERSION 0.3.0 LANGUAGES CXX)
+project(lw_MD VERSION 0.3.1 LANGUAGES CXX)
 
 if(NOT WIN32 OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
   message(FATAL_ERROR "lw.MD supports Windows x64 only")
@@ -64,7 +64,8 @@ set_source_files_properties("${LWMD_GENERATED_DIR}/frontend_bundle.rc"
   PROPERTIES OBJECT_DEPENDS "${LWMD_FRONTEND_ZIP}")
 
 add_executable(lw_md WIN32
-  native/app/main.cpp native/app/main_window.cpp native/bridge/bridge_dispatcher.cpp
+  native/app/main.cpp native/app/main_window.cpp native/app/command_line.cpp
+  native/associations/file_association.cpp native/bridge/bridge_dispatcher.cpp
   native/filesystem/file_service.cpp native/dialogs/file_dialog.cpp native/settings/settings.cpp
   native/images/image_service.cpp native/recovery/recovery_service.cpp
   native/resources/frontend_bundle.cpp native/webview/webview_host.cpp resources/lw-md.rc
@@ -72,7 +73,7 @@ add_executable(lw_md WIN32
 add_dependencies(lw_md lwmd_frontend_bundle)
 target_include_directories(lw_md PRIVATE native ${WEBVIEW2_INCLUDE})
 target_include_directories(lw_md SYSTEM PRIVATE ${miniz_SOURCE_DIR})
-target_link_libraries(lw_md PRIVATE nlohmann_json::nlohmann_json miniz "${WEBVIEW2_LOADER}" ole32 shell32 comdlg32 shlwapi user32 gdi32 crypt32)
+target_link_libraries(lw_md PRIVATE nlohmann_json::nlohmann_json miniz "${WEBVIEW2_LOADER}" ole32 shell32 comdlg32 shlwapi user32 gdi32 crypt32 advapi32)
 target_compile_definitions(lw_md PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE _WIN32_WINNT=0x0A00)
 target_compile_options(lw_md PRIVATE /W4 /permissive- /utf-8 /EHsc)
 set_target_properties(lw_md PROPERTIES OUTPUT_NAME "lw.MD")
@@ -80,10 +81,11 @@ set_target_properties(lw_md PROPERTIES OUTPUT_NAME "lw.MD")
 include(CTest)
 if(BUILD_TESTING)
   add_executable(lw_md_native_tests tests/native_tests.cpp native/filesystem/file_service.cpp
-    native/images/image_service.cpp native/recovery/recovery_service.cpp)
+    native/images/image_service.cpp native/recovery/recovery_service.cpp
+    native/app/command_line.cpp native/associations/file_association.cpp)
   target_include_directories(lw_md_native_tests PRIVATE native)
   target_compile_definitions(lw_md_native_tests PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
   target_compile_options(lw_md_native_tests PRIVATE /W4 /permissive- /utf-8 /EHsc)
-  target_link_libraries(lw_md_native_tests PRIVATE nlohmann_json::nlohmann_json crypt32 shell32 ole32)
+  target_link_libraries(lw_md_native_tests PRIVATE nlohmann_json::nlohmann_json crypt32 shell32 ole32 advapi32)
   add_test(NAME lw_md_native_tests COMMAND lw_md_native_tests)
 endif()

@@ -1,5 +1,6 @@
 #include "bridge/bridge_dispatcher.h"
 
+#include "associations/file_association.h"
 #include "common/app_state.h"
 #include "common/utf8.h"
 #include "dialogs/file_dialog.h"
@@ -212,6 +213,11 @@ void BridgeDispatcher::SetCurrentDocumentPath(const std::wstring& path) {
   if (document_mapper_) document_mapper_(current_document_path_);
 }
 
+void BridgeDispatcher::SetLaunchDocumentPath(const std::wstring& path) {
+  ValidateReadableMarkdown(path);
+  launch_document_path_ = fs::path(path).lexically_normal().wstring();
+}
+
 void BridgeDispatcher::SetPendingImagePaths(
     const std::vector<std::filesystem::path>& paths) {
   if (paths.empty() || paths.size() > kMaxImportedImages) {
@@ -316,6 +322,48 @@ void BridgeDispatcher::Dispatch(const std::string& raw, Reply reply) {
       reply(Success(id, nullptr).dump());
       return;
     }
+    if (method == "association.status") {
+      if (!params.empty()) {
+        reply(Error(id, "BRIDGE_INVALID_PARAMS",
+                    "Invalid association parameters")
+                  .dump());
+        return;
+      }
+      const auto status = GetMarkdownFileAssociationStatus();
+      reply(Success(id,
+                    {{"registered", status.registered},
+                     {"current", status.current},
+                     {"executablePath", WideToUtf8(status.executable_path)},
+                     {"registeredExecutablePath",
+                      status.registered_executable_path.empty()
+                          ? json(nullptr)
+                          : json(WideToUtf8(
+                                status.registered_executable_path))}})
+                .dump());
+      return;
+    }
+    if (method == "association.register" ||
+        method == "association.unregister" ||
+        method == "association.openDefaultApps") {
+      if (!params.empty()) {
+        reply(Error(id, "BRIDGE_INVALID_PARAMS",
+                    "Invalid association parameters")
+                  .dump());
+        return;
+      }
+      if (method == "association.register") {
+        RegisterMarkdownFileAssociations();
+      } else if (method == "association.unregister") {
+        UnregisterMarkdownFileAssociations();
+      } else if (!OpenDefaultAppsSettings(owner_)) {
+        reply(Error(id, "DEFAULT_APPS_OPEN_FAILED",
+                    "Cannot open Windows default apps settings")
+                  .dump());
+        return;
+      }
+      reply(Success(id, nullptr).dump());
+      return;
+    }
     if (method == "recovery.get" || method == "recovery.restore") {
       if (!params.empty()) {
         reply(Error(id, "BRIDGE_INVALID_PARAMS", "Invalid recovery parameters")
@@ -387,6 +435,28 @@ void BridgeDispatcher::Dispatch(const std::string& raw, Reply reply) {
       }
       ClearRecoverySnapshot();
       reply(Success(id, nullptr).dump());
+      return;
+    }
+    if (method == "file.getLaunch") {
+      if (!params.empty()) {
+        reply(Error(id, "BRIDGE_INVALID_PARAMS", "Invalid launch parameters")
+                  .dump());
+        return;
+      }
+      if (launch_document_path_.empty()) {
+        reply(Success(id, nullptr).dump());
+        return;
+      }
+      ValidateReadableMarkdown(launch_document_path_);
+      const auto path = launch_document_path_;
+      const auto content = ReadUtf8File(path);
+      launch_document_path_.clear();
+      SetCurrentDocumentPath(path);
+      reply(Success(id,
+                    {{"path", WideToUtf8(path)},
+                     {"name", WideToUtf8(fs::path(path).filename().wstring())},
+                     {"content", std::move(content)}})
+                .dump());
       return;
     }
     if (method == "file.clearCurrent") {

@@ -1,3 +1,7 @@
 #pragma once
 #include <Windows.h>
-int RunMainWindow(HINSTANCE instance);
+#include <optional>
+#include <string>
+
+int RunMainWindow(HINSTANCE instance,
+                  const std::optional<std::wstring>& launch_path = std::nullopt);

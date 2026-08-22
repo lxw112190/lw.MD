@@ -9,6 +9,7 @@ import { OutlinePanel } from "./components/OutlinePanel";
 import {
   desktop,
   type DesktopSettings,
+  type FileAssociationStatus,
   type NativeDocument,
   type RecoverySnapshot,
   type SavedImage,
@@ -49,6 +50,10 @@ export default function App() {
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
   const [exportingPdf, setExportingPdf] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [associationOpen, setAssociationOpen] = useState(false);
+  const [associationInfo, setAssociationInfo] =
+    useState<FileAssociationStatus | null>(null);
+  const [associationBusy, setAssociationBusy] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
   const [replaceVisible, setReplaceVisible] = useState(false);
   const [findQuery, setFindQuery] = useState("");
@@ -79,20 +84,25 @@ export default function App() {
     ? Math.min(activeMatch, findMatches.length - 1)
     : 0;
   const title = `${document.name}${document.dirty ? " *" : ""} — lw.MD`;
-  const acceptDocument = useCallback((result: NativeDocument) => {
-    void desktop.recovery.clear().catch(() => undefined);
-    lastRecoverySnapshot.current = null;
-    setDocument({
-      ...result,
-      savedContent: result.content,
-      dirty: false,
-      encoding: "utf-8",
-    });
-    setSettings((current) => ({
-      ...current,
-      recentFiles: addRecentFile(current.recentFiles, result.path),
-    }));
-  }, []);
+  const acceptDocument = useCallback(
+    (result: NativeDocument, clearRecovery = true) => {
+      if (clearRecovery) {
+        void desktop.recovery.clear().catch(() => undefined);
+        lastRecoverySnapshot.current = null;
+      }
+      setDocument({
+        ...result,
+        savedContent: result.content,
+        dirty: false,
+        encoding: "utf-8",
+      });
+      setSettings((current) => ({
+        ...current,
+        recentFiles: addRecentFile(current.recentFiles, result.path),
+      }));
+    },
+    [],
+  );
   const changeContent = useCallback((content: string) => {
     setDocument((current) => updateDocumentContent(current, content));
   }, []);
@@ -246,6 +256,41 @@ export default function App() {
       setStatus(errorMessage(error));
     }
   }, []);
+  const showWindowsIntegration = useCallback(async () => {
+    setAssociationOpen(true);
+    setAssociationInfo(null);
+    try {
+      setAssociationInfo(await desktop.association.status());
+    } catch (error) {
+      setStatus(errorMessage(error));
+    }
+  }, []);
+  const updateWindowsIntegration = useCallback(
+    async (action: "register" | "unregister") => {
+      if (associationBusy) return;
+      setAssociationBusy(true);
+      try {
+        await desktop.association[action]();
+        setAssociationInfo(await desktop.association.status());
+        setStatus(
+          action === "register" ? "Windows 集成已注册" : "Windows 集成已取消",
+        );
+      } catch (error) {
+        setStatus(errorMessage(error));
+      } finally {
+        setAssociationBusy(false);
+      }
+    },
+    [associationBusy],
+  );
+  const openDefaultApps = useCallback(async () => {
+    try {
+      await desktop.association.openDefaultApps();
+      setStatus("已打开 Windows 默认应用设置");
+    } catch (error) {
+      setStatus(errorMessage(error));
+    }
+  }, []);
   const showFind = useCallback((showReplace: boolean) => {
     setFindOpen(true);
     setReplaceVisible(showReplace);
@@ -382,21 +427,33 @@ export default function App() {
     documentRef.current = document;
   }, [document]);
   useEffect(() => {
+    if (!settingsReady) return;
     let cancelled = false;
-    void desktop.recovery
-      .get()
-      .then((snapshot) => {
+    void (async () => {
+      try {
+        const launchDocument = await desktop.file.getLaunch();
+        if (!cancelled && launchDocument) {
+          acceptDocument(launchDocument, false);
+          setStatus("已从 Windows 打开文件");
+        }
+      } catch (error) {
+        if (!cancelled && !isDesktopUnavailable(error)) {
+          setStatus(errorMessage(error));
+        }
+      }
+      try {
+        const snapshot = await desktop.recovery.get();
         if (cancelled) return;
         if (snapshot) setPendingRecovery(snapshot);
         else setRecoveryReady(true);
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) setRecoveryReady(true);
-      });
+      }
+    })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [acceptDocument, settingsReady]);
   useEffect(() => {
     if (!recoveryReady) return;
     if (!document.dirty) {
@@ -507,13 +564,15 @@ export default function App() {
     return () => media.removeEventListener("change", apply);
   }, [settings.theme]);
   useEffect(() => {
-    if (!aboutOpen) return;
+    if (!aboutOpen && !associationOpen) return;
     const closeWithEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setAboutOpen(false);
+      if (event.key !== "Escape") return;
+      setAboutOpen(false);
+      setAssociationOpen(false);
     };
     window.addEventListener("keydown", closeWithEscape);
     return () => window.removeEventListener("keydown", closeWithEscape);
-  }, [aboutOpen]);
+  }, [aboutOpen, associationOpen]);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && findOpen) {
@@ -567,6 +626,9 @@ export default function App() {
               <button onClick={() => void save(true)}>另存为…</button>
               <button disabled={exportingPdf} onClick={() => void exportPdf()}>
                 {exportingPdf ? "正在导出…" : "导出 PDF"}
+              </button>
+              <button onClick={() => void showWindowsIntegration()}>
+                Windows 集成…
               </button>
               {settings.recentFiles.length > 0 && (
                 <label>
@@ -857,6 +919,101 @@ export default function App() {
               <br />
               MIT License · Copyright © 2026
             </p>
+          </section>
+        </div>
+      )}
+      {associationOpen && (
+        <div
+          className="association-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !associationBusy) {
+              setAssociationOpen(false);
+            }
+          }}
+        >
+          <section
+            className="association-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="association-title"
+          >
+            <div className="association-heading">
+              <div>
+                <h2 id="association-title">Windows 集成</h2>
+                <p>让 Markdown 文件更方便地使用 lw.MD 打开。</p>
+              </div>
+              <span
+                className={`association-status ${
+                  associationInfo?.current
+                    ? "is-current"
+                    : associationInfo?.registered
+                      ? "needs-repair"
+                      : "is-unregistered"
+                }`}
+              >
+                {!associationInfo
+                  ? "正在检查"
+                  : associationInfo.current
+                    ? "已注册"
+                    : associationInfo.registered
+                      ? "需要修复"
+                      : "未注册"}
+              </span>
+            </div>
+            <ul className="association-features">
+              <li>右键菜单显示“使用 lw.MD 打开”</li>
+              <li>在 Windows“打开方式”中显示 lw.MD</li>
+              <li>支持 .md 和 .markdown 文件</li>
+            </ul>
+            <p className="association-note">
+              注册不会修改当前默认应用。如需默认使用 lw.MD，请在 Windows
+              设置中自行选择。
+            </p>
+            {associationInfo?.registered && !associationInfo.current && (
+              <div className="association-path-warning">
+                <strong>检测到程序位置发生变化</strong>
+                <span title={associationInfo.registeredExecutablePath ?? ""}>
+                  {associationInfo.registeredExecutablePath ||
+                    "原注册路径不可用"}
+                </span>
+              </div>
+            )}
+            <div className="association-actions">
+              <button
+                disabled={!associationInfo?.current || associationBusy}
+                onClick={() => void openDefaultApps()}
+              >
+                默认应用设置…
+              </button>
+              <span />
+              {associationInfo?.registered && (
+                <button
+                  disabled={associationBusy}
+                  onClick={() => void updateWindowsIntegration("unregister")}
+                >
+                  取消注册
+                </button>
+              )}
+              {!associationInfo?.current && (
+                <button
+                  className="primary"
+                  disabled={!associationInfo || associationBusy}
+                  onClick={() => void updateWindowsIntegration("register")}
+                >
+                  {associationBusy
+                    ? "正在处理…"
+                    : associationInfo?.registered
+                      ? "修复关联"
+                      : "注册 Windows 集成"}
+                </button>
+              )}
+              <button
+                disabled={associationBusy}
+                onClick={() => setAssociationOpen(false)}
+              >
+                完成
+              </button>
+            </div>
           </section>
         </div>
       )}

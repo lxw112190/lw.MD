@@ -17,6 +17,7 @@ class BridgeDispatcher {
         pdf_exporter_(std::move(pdf_exporter)),
         document_mapper_(std::move(document_mapper)) {}
   void Dispatch(const std::string& request, Reply reply);
+  void SetLaunchDocumentPath(const std::wstring& path);
   void SetCurrentDocumentPath(const std::wstring& path);
   void SetPendingImagePaths(const std::vector<std::filesystem::path>& paths);
 
@@ -24,6 +25,7 @@ class BridgeDispatcher {
   HWND owner_;
   PdfExporter pdf_exporter_;
   DocumentMapper document_mapper_;
+  std::wstring launch_document_path_;
   std::wstring current_document_path_;
   std::vector<std::wstring> pending_image_paths_;
 };

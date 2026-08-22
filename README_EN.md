@@ -10,6 +10,8 @@
 
 **lw.MD (Jianmo)** is a clean, lightweight, local-first Markdown editor for Windows. It is built with React, TypeScript, Vditor, C++17, and WebView2, and distributed as a single portable EXE.
 
+<img src="docs/assets/lw-md-editor.png" alt="lw.MD (Jianmo) main interface" width="960">
+
 ## Features
 
 - Instant-rendering Markdown editing with Vditor IR mode
@@ -21,6 +23,7 @@
 - Periodic recovery snapshots for restoring unsaved work after an unexpected exit
 - A4 PDF export
 - Persistent window position, size, and maximized state
+- Windows context-menu, Open With, and default-app settings integration
 - Fully offline frontend assets; end users do not need Node.js
 - WebView2 bridge origin checks, navigation restrictions, and parameter validation
 
@@ -29,7 +32,8 @@
 1. Download the latest `lw.MD-windows-x64.zip` from [Releases](https://github.com/lxw112190/lw.MD/releases).
 2. Extract the archive and run `lw.MD.exe`.
 3. Select **Open**, or drag a Markdown file into the window.
-4. Use **File → Export PDF** to create an A4 PDF.
+4. Optionally use **File → Windows Integration...** to add context-menu and Open With entries.
+5. Use **File → Export PDF** to create an A4 PDF.
 
 Requirements:
 
@@ -68,6 +72,22 @@ When a document has unsaved changes, lw.MD creates a recovery snapshot about 1.5
 - Drop into the editor workspace to load the file contents as an unsaved document. WebView2 cannot expose the original disk path in this case, so the first save requires a location.
 - After the document is saved, dropped or pasted images are copied into the adjacent `assets` directory and inserted with relative paths.
 
+## Windows Integration
+
+Open **File → Windows Integration...** to register any of the following on demand:
+
+- Show **Open with lw.MD** for `.md` and `.markdown` files.
+- List **lw.MD Jianmo** in the Windows Open With picker.
+- Choose lw.MD from Windows Default Apps settings; the application never takes over the default association automatically.
+
+Registration is stored for the current user only and does not require administrator privileges. On Windows 11, the traditional context-menu command may appear under **Show more options**.
+
+Because lw.MD is portable, moving `lw.MD.exe` makes the old registered path stale. The integration dialog then shows **Repair required**; select **Repair association** to update it. Documents with spaces or non-ASCII paths can also be opened directly from the command line:
+
+```powershell
+.\lw.MD.exe "D:\Documents\Project Notes.md"
+```
+
 ## Build from Source
 
 Node.js 20.19+, CMake 3.22+, Visual Studio 2022, and the Windows SDK are required.
@@ -93,8 +113,8 @@ At runtime, the embedded frontend is extracted by content hash to `%LOCALAPPDATA
 Main project directories:
 
 - `app/`: React, TypeScript, and Vditor frontend
-- `native/`: C++17 WebView2 host, file bridge, and recovery service
-- `tests/`: native file and recovery tests
+- `native/`: C++17 WebView2 host, file bridge, recovery service, and Windows integration
+- `tests/`: native file, recovery, launch-argument, and isolated-registry tests
 - `.github/workflows/`: Windows CI and automated releases
 
 ## CI and Releases
@@ -104,11 +124,11 @@ Every push runs frontend checks, the Release build, and native tests. A download
 Pushing a `v*` tag that matches the project version automatically creates a GitHub Release and uploads the portable ZIP and SHA-256 checksum:
 
 ```powershell
-git tag -a v0.3.0 -m "lw.MD v0.3.0"
-git push origin v0.3.0
+git tag -a v0.3.1 -m "lw.MD v0.3.1"
+git push origin v0.3.1
 ```
 
-Tags with suffixes such as `v0.3.0-beta.1` or `v0.3.0-rc.1` are automatically published as GitHub pre-releases.
+Tags with suffixes such as `v0.3.1-beta.1` or `v0.3.1-rc.1` are automatically published as GitHub pre-releases.
 
 To debug WebView2 locally, set `LWMD_ENABLE_DEVTOOLS=1` before launching the application. Developer tools are disabled by default in production builds.
 
