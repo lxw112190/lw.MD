@@ -19,7 +19,8 @@ concurrency:
 jobs:
   build:
     name: Build Windows x64
-    runs-on: windows-latest
+    # Pin VS2022: windows-latest moved to the VS2026 runner image in 2026.
+    runs-on: windows-2022
     timeout-minutes: 30
 
     steps:
