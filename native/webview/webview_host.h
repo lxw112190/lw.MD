@@ -29,5 +29,9 @@ class WebViewHost {
   Microsoft::WRL::ComPtr<ICoreWebView2Environment6> print_environment_;
   EventRegistrationToken message_token_{};
   EventRegistrationToken resource_token_{};
+  EventRegistrationToken navigation_token_{};
+  EventRegistrationToken frame_navigation_token_{};
+  EventRegistrationToken new_window_token_{};
+  EventRegistrationToken permission_token_{};
   std::filesystem::path document_root_;
 };

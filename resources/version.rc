@@ -15,7 +15,7 @@ BEGIN
     BLOCK "080404B0"
     BEGIN
       VALUE "CompanyName", "天天代码码天天"
-      VALUE "FileDescription", "简洁可靠的本地 Markdown 编辑器"
+      VALUE "FileDescription", "简洁轻量的本地 Markdown 编辑器"
       VALUE "FileVersion", "0.3.0"
       VALUE "InternalName", "lw.MD"
       VALUE "LegalCopyright", "Copyright © 2026 天天代码码天天"

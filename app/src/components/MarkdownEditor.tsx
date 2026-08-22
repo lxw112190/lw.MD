@@ -212,7 +212,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
             (heading.textContent ?? "").replace(/^#{1,6}\s*/, "").trim() ===
             text,
         );
-        const target = exact[0] ?? headings[occurrence];
+        const target = headings[occurrence] ?? exact[0];
         target?.scrollIntoView({ behavior: "smooth", block: "center" });
       },
       undo: () => editor.current?.vditor.undo?.undo(editor.current.vditor),

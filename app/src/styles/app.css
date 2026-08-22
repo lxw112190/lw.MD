@@ -40,15 +40,7 @@ footer {
 .menu {
   display: flex;
   align-items: center;
-}
-.document-name {
-  flex: 1;
-  color: #78716c;
-  font-size: 13px;
-  overflow: hidden;
-  text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  width: 100%;
 }
 button {
   background: transparent;
@@ -65,6 +57,51 @@ button:disabled {
   cursor: wait;
   opacity: 0.55;
 }
+.menu-dropdown {
+  position: relative;
+}
+.menu-dropdown summary {
+  padding: 7px 10px;
+  border-radius: 5px;
+  color: #44403c;
+  cursor: pointer;
+  list-style: none;
+}
+.menu-dropdown summary::-webkit-details-marker {
+  display: none;
+}
+.menu-dropdown summary:hover,
+.menu-dropdown[open] summary {
+  background: #f0eeeb;
+}
+.menu-popover {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 7px);
+  left: 0;
+  display: grid;
+  gap: 4px;
+  width: 190px;
+  padding: 8px;
+  border: 1px solid #e7e5e4;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 12px 35px rgb(28 25 23 / 16%);
+}
+.menu-popover button {
+  width: 100%;
+  text-align: left;
+}
+.menu-popover label {
+  display: grid;
+  gap: 4px;
+  padding: 6px 8px;
+  color: #78716c;
+  font-size: 12px;
+}
+.about-menu-button {
+  margin-left: auto;
+}
 .recent-select,
 .theme-select {
   border: 0;
@@ -76,7 +113,80 @@ button:disabled {
   font-size: 12px;
 }
 .recent-select {
-  max-width: 120px;
+  width: 100%;
+}
+.about-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(28 25 23 / 42%);
+  backdrop-filter: blur(2px);
+}
+.about-dialog {
+  position: relative;
+  width: min(420px, 100%);
+  padding: 30px 28px 24px;
+  border: 1px solid #e7e5e4;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgb(28 25 23 / 24%);
+  text-align: center;
+}
+.about-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: #78716c;
+  font-size: 24px;
+  line-height: 1;
+}
+.about-icon {
+  width: 76px;
+  height: 76px;
+  border-radius: 18px;
+}
+.about-dialog h2 {
+  margin: 14px 0 4px;
+  color: #1c1917;
+  font-size: 21px;
+}
+.about-version,
+.about-description,
+.about-meta {
+  color: #78716c;
+}
+.about-version {
+  margin: 0;
+  font-size: 13px;
+}
+.about-description {
+  margin: 16px 0 20px;
+  font-size: 14px;
+}
+.about-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+.about-actions button {
+  border: 1px solid #d6d3d1;
+  padding: 8px 14px;
+}
+.about-actions .primary {
+  border-color: #0f9f7a;
+  color: #08745b;
+  background: #ecfdf7;
+}
+.about-meta {
+  margin: 20px 0 0;
+  font-size: 12px;
+  line-height: 1.75;
 }
 .outline-panel {
   border-right: 1px solid #e7e5e4;
@@ -299,6 +409,39 @@ footer span:first-child {
 :root[data-theme="dark"] button:hover {
   background: #2b2b2b;
 }
+:root[data-theme="dark"] .menu-dropdown summary {
+  color: #d6d3d1;
+}
+:root[data-theme="dark"] .menu-dropdown summary:hover,
+:root[data-theme="dark"] .menu-dropdown[open] summary {
+  background: #2b2b2b;
+}
+:root[data-theme="dark"] .menu-popover {
+  border-color: #404040;
+  background: #242424;
+  box-shadow: 0 12px 35px rgb(0 0 0 / 35%);
+}
 :root[data-theme="dark"] .outline-title {
   color: #d6d3d1;
+}
+:root[data-theme="dark"] .about-dialog {
+  border-color: #404040;
+  background: #242424;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 45%);
+}
+:root[data-theme="dark"] .about-dialog h2 {
+  color: #f5f5f4;
+}
+:root[data-theme="dark"] .about-version,
+:root[data-theme="dark"] .about-description,
+:root[data-theme="dark"] .about-meta {
+  color: #a8a29e;
+}
+:root[data-theme="dark"] .about-actions button {
+  border-color: #525252;
+}
+:root[data-theme="dark"] .about-actions .primary {
+  border-color: #12856b;
+  color: #99f6e4;
+  background: #143d35;
 }

@@ -4,7 +4,7 @@
 
 <img src="docs/assets/lw-md-banner.png" alt="lw.MD（简墨）" width="760">
 
-一个简洁可靠的 Windows 本地 Markdown 桌面编辑器。使用 React、TypeScript、Vditor、C++17 和 WebView2 构建，最终以单个便携 EXE 分发。
+一个简洁轻量的 Windows 本地 Markdown 桌面编辑器。使用 React、TypeScript、Vditor、C++17 和 WebView2 构建，最终以单个便携 EXE 分发。
 
 ## 功能
 

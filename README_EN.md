@@ -4,7 +4,7 @@
 
 <img src="docs/assets/lw-md-banner.png" alt="lw.MD / Jianmo" width="760">
 
-A clean and reliable local Markdown editor for Windows. It is built with React, TypeScript, Vditor, C++17, and WebView2, and distributed as a single portable EXE.
+A clean and lightweight local Markdown editor for Windows. It is built with React, TypeScript, Vditor, C++17, and WebView2, and distributed as a single portable EXE.
 
 ## Features
 

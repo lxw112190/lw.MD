@@ -39,6 +39,7 @@ void OpenDroppedFiles(HWND window, State& state,
     return;
   }
   if (selected.empty()) {
+    state.bridge->SetPendingImagePaths(images);
     auto paths = nlohmann::json::array();
     for (const auto& image : images) paths.push_back(WideToUtf8(image.wstring()));
     const auto message = nlohmann::json{{"type", "event"},
@@ -52,7 +53,7 @@ void OpenDroppedFiles(HWND window, State& state,
   if (GetPropW(window, kDirtyDocumentProperty) &&
       MessageBoxW(window, L"当前文档尚未保存。\n\n确定放弃修改并打开拖入的文件吗？",
                   L"lw.MD — 未保存", MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2) != IDYES) return;
-  state.webview->SetDocumentFolder(selected.wstring());
+  state.bridge->SetCurrentDocumentPath(selected.wstring());
   const auto message = nlohmann::json{{"type", "event"},
                                       {"name", "file.opened"},
                                       {"payload", {{"path", WideToUtf8(selected.wstring())},

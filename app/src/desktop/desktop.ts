@@ -35,8 +35,11 @@ export const desktop = {
     setSettings: (settings: DesktopSettings) =>
       invoke<void>("app.setSettings", settings),
     setDirty: (dirty: boolean) => invoke<void>("app.setDirty", { dirty }),
+    setTitle: (title: string) => invoke<void>("app.setTitle", { title }),
+    openExternal: (url: string) => invoke<void>("app.openExternal", { url }),
   },
   file: {
+    clearCurrent: () => invoke<void>("file.clearCurrent"),
     open: () => invoke<NativeDocument | null>("file.open"),
     read: (path: string) => invoke<NativeDocument>("file.read", { path }),
     save: (path: string, content: string) =>

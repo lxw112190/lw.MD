@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { decodeBridgeResponse } from "./bridge";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { decodeBridgeResponse, invoke } from "./bridge";
 
 describe("desktop bridge response", () => {
   const response = { type: "response", id: "req-1", ok: true, result: "pong" };
@@ -32,5 +32,28 @@ describe("desktop bridge response", () => {
       payload: { sourcePaths: ["C:\\Pictures\\示例.png"] },
     };
     expect(decodeBridgeResponse(event)).toEqual(event);
+  });
+});
+
+describe("desktop bridge requests", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    delete window.chrome;
+  });
+
+  it("rejects a native request that never replies", async () => {
+    vi.useFakeTimers();
+    window.chrome = {
+      webview: {
+        postMessage: vi.fn(),
+        addEventListener: vi.fn(),
+      },
+    };
+    const request = invoke("app.ping");
+    const rejection = expect(request).rejects.toMatchObject({
+      code: "BRIDGE_TIMEOUT",
+    });
+    await vi.advanceTimersByTimeAsync(60_000);
+    await rejection;
   });
 });

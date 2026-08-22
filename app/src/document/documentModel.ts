@@ -10,7 +10,7 @@ export interface DocumentState {
 export function createUntitledDocument(): DocumentState {
   return {
     path: null,
-    name: "Untitled",
+    name: "未命名",
     content: "",
     savedContent: "",
     dirty: false,

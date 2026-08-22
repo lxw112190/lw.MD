@@ -27,19 +27,42 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v7
 
-      - name: Verify release tag version
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Verify synchronized version metadata
         shell: pwsh
         run: |
-          $tagVersion = $env:GITHUB_REF_NAME -replace '^v', '' -replace '-.*$', ''
           $cmake = Get-Content -LiteralPath "CMakeLists.txt" -Raw
           if ($cmake -notmatch 'project\(lw_MD VERSION ([0-9]+\.[0-9]+\.[0-9]+)') {
             throw "Cannot read project version from CMakeLists.txt"
           }
           $projectVersion = $Matches[1]
+          $rootVersion = (Get-Content -LiteralPath "package.json" -Raw | ConvertFrom-Json).version
           $frontendVersion = (Get-Content -LiteralPath "app/package.json" -Raw | ConvertFrom-Json).version
-          if ($tagVersion -ne $projectVersion -or $tagVersion -ne $frontendVersion) {
-            throw "Tag version $tagVersion does not match project version $projectVersion / frontend version $frontendVersion"
+          $versionResource = Get-Content -LiteralPath "resources/version.rc" -Raw
+          if ($versionResource -notmatch 'VALUE\s+"FileVersion",\s+"([0-9]+\.[0-9]+\.[0-9]+)"') {
+            throw "Cannot read FileVersion from resources/version.rc"
+          }
+          $fileVersion = $Matches[1]
+          if ($versionResource -notmatch 'VALUE\s+"ProductVersion",\s+"([0-9]+\.[0-9]+\.[0-9]+)"') {
+            throw "Cannot read ProductVersion from resources/version.rc"
+          }
+          $productVersion = $Matches[1]
+          if ($versionResource -notmatch 'FILEVERSION\s+([0-9]+),([0-9]+),([0-9]+),0') {
+            throw "Cannot read numeric FILEVERSION from resources/version.rc"
+          }
+          $numericFileVersion = "$($Matches[1]).$($Matches[2]).$($Matches[3])"
+          if ($versionResource -notmatch 'PRODUCTVERSION\s+([0-9]+),([0-9]+),([0-9]+),0') {
+            throw "Cannot read numeric PRODUCTVERSION from resources/version.rc"
+          }
+          $numericProductVersion = "$($Matches[1]).$($Matches[2]).$($Matches[3])"
+          $versions = @($projectVersion, $rootVersion, $frontendVersion, $fileVersion, $productVersion, $numericFileVersion, $numericProductVersion) | Select-Object -Unique
+          if ($versions.Count -ne 1) {
+            throw "Version metadata is inconsistent: CMake=$projectVersion root=$rootVersion frontend=$frontendVersion file=$fileVersion product=$productVersion numericFile=$numericFileVersion numericProduct=$numericProductVersion"
+          }
+          if ($env:GITHUB_REF_TYPE -eq "tag") {
+            $tagVersion = $env:GITHUB_REF_NAME -replace '^v', '' -replace '-.*$', ''
+            if ($tagVersion -ne $projectVersion) {
+              throw "Tag version $tagVersion does not match project version $projectVersion"
+            }
           }
 
       - name: Set up Node.js

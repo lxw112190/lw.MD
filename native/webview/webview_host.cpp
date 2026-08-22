@@ -1,6 +1,7 @@
 #include "webview/webview_host.h"
 #include "common/utf8.h"
 #include <ShlObj.h>
+#include <Shellapi.h>
 #include <Shlwapi.h>
 #include <algorithm>
 #include <filesystem>
@@ -11,6 +12,53 @@
 #include <vector>
 using Microsoft::WRL::Callback;
 namespace {
+constexpr std::wstring_view kAppOrigin = L"https://app.lwmd/";
+constexpr std::wstring_view kDocumentOrigin = L"https://document.lwmd/";
+
+bool StartsWithIgnoreCase(const std::wstring_view value,
+                          const std::wstring_view prefix) {
+  return value.size() >= prefix.size() &&
+         CompareStringOrdinal(value.data(), static_cast<int>(prefix.size()),
+                              prefix.data(), static_cast<int>(prefix.size()),
+                              TRUE) == CSTR_EQUAL;
+}
+
+bool IsTrustedAppUri(const std::wstring_view uri) {
+  return StartsWithIgnoreCase(uri, kAppOrigin);
+}
+
+bool IsPublicWebUri(const std::wstring_view uri) {
+  const bool is_web = StartsWithIgnoreCase(uri, L"https://") ||
+                      StartsWithIgnoreCase(uri, L"http://");
+  return is_web && !IsTrustedAppUri(uri) &&
+         !StartsWithIgnoreCase(uri, kDocumentOrigin);
+}
+
+void OpenPublicWebUri(HWND owner, const std::wstring_view uri) {
+  if (!IsPublicWebUri(uri)) return;
+  const std::wstring value(uri);
+  ShellExecuteW(owner, L"open", value.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+}
+
+bool IsTrustedWebView(ICoreWebView2* webview) {
+  if (!webview) return false;
+  LPWSTR raw_source = nullptr;
+  if (FAILED(webview->get_Source(&raw_source)) || !raw_source) {
+    if (raw_source) CoTaskMemFree(raw_source);
+    return false;
+  }
+  const bool trusted = IsTrustedAppUri(raw_source);
+  CoTaskMemFree(raw_source);
+  return trusted;
+}
+
+bool PostJsonToTrustedWebView(ICoreWebView2* webview,
+                              const std::string& message) {
+  if (!IsTrustedWebView(webview)) return false;
+  const auto wide = Utf8ToWide(message);
+  return SUCCEEDED(webview->PostWebMessageAsJson(wide.c_str()));
+}
+
 std::wstring UserDataFolder() {
   PWSTR local = nullptr;
   if (FAILED(SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_CREATE, nullptr, &local))) return L"";
@@ -64,7 +112,14 @@ std::wstring ImageContentType(const std::filesystem::path& path) {
 }
 }
 WebViewHost::~WebViewHost() {
-  if (webview_) { webview_->remove_WebMessageReceived(message_token_); webview_->remove_WebResourceRequested(resource_token_); }
+  if (webview_) {
+    webview_->remove_WebMessageReceived(message_token_);
+    webview_->remove_WebResourceRequested(resource_token_);
+    webview_->remove_NavigationStarting(navigation_token_);
+    webview_->remove_FrameNavigationStarting(frame_navigation_token_);
+    webview_->remove_NewWindowRequested(new_window_token_);
+    webview_->remove_PermissionRequested(permission_token_);
+  }
   if (controller_) controller_->Close();
 }
 void WebViewHost::Create(HWND window, const std::wstring& content_folder,
@@ -79,8 +134,68 @@ void WebViewHost::Create(HWND window, const std::wstring& content_folder,
       controller_ = controller; controller_->get_CoreWebView2(&webview_);
       Microsoft::WRL::ComPtr<ICoreWebView2Controller4> controller4;
       if (SUCCEEDED(controller_.As(&controller4))) controller4->put_AllowExternalDrop(TRUE);
-      Microsoft::WRL::ComPtr<ICoreWebView2Settings> settings; if (SUCCEEDED(webview_->get_Settings(&settings))) { settings->put_AreDevToolsEnabled(DevToolsEnabled() ? TRUE : FALSE); settings->put_IsStatusBarEnabled(FALSE); }
+      Microsoft::WRL::ComPtr<ICoreWebView2Settings> settings; if (SUCCEEDED(webview_->get_Settings(&settings))) { settings->put_AreDevToolsEnabled(DevToolsEnabled() ? TRUE : FALSE); settings->put_IsStatusBarEnabled(FALSE); settings->put_AreHostObjectsAllowed(FALSE); settings->put_IsWebMessageEnabled(TRUE); }
       Microsoft::WRL::ComPtr<ICoreWebView2_3> webview3; if (SUCCEEDED(webview_.As(&webview3))) webview3->SetVirtualHostNameToFolderMapping(L"app.lwmd", content_folder.c_str(), COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_DENY_CORS);
+      webview_->add_NavigationStarting(
+          Callback<ICoreWebView2NavigationStartingEventHandler>(
+              [this](ICoreWebView2*,
+                     ICoreWebView2NavigationStartingEventArgs* args) -> HRESULT {
+                LPWSTR raw_uri = nullptr;
+                if (FAILED(args->get_Uri(&raw_uri)) || !raw_uri) {
+                  if (raw_uri) CoTaskMemFree(raw_uri);
+                  args->put_Cancel(TRUE);
+                  return S_OK;
+                }
+                const std::wstring uri(raw_uri);
+                CoTaskMemFree(raw_uri);
+                if (!IsTrustedAppUri(uri)) {
+                  args->put_Cancel(TRUE);
+                  OpenPublicWebUri(window_, uri);
+                }
+                return S_OK;
+              })
+              .Get(),
+          &navigation_token_);
+      webview_->add_FrameNavigationStarting(
+          Callback<ICoreWebView2NavigationStartingEventHandler>(
+              [](ICoreWebView2*,
+                 ICoreWebView2NavigationStartingEventArgs* args) -> HRESULT {
+                LPWSTR raw_uri = nullptr;
+                if (FAILED(args->get_Uri(&raw_uri)) || !raw_uri) {
+                  if (raw_uri) CoTaskMemFree(raw_uri);
+                  args->put_Cancel(TRUE);
+                  return S_OK;
+                }
+                const bool trusted = IsTrustedAppUri(raw_uri);
+                CoTaskMemFree(raw_uri);
+                if (!trusted) args->put_Cancel(TRUE);
+                return S_OK;
+              })
+              .Get(),
+          &frame_navigation_token_);
+      webview_->add_NewWindowRequested(
+          Callback<ICoreWebView2NewWindowRequestedEventHandler>(
+              [this](ICoreWebView2*,
+                     ICoreWebView2NewWindowRequestedEventArgs* args) -> HRESULT {
+                args->put_Handled(TRUE);
+                LPWSTR raw_uri = nullptr;
+                if (SUCCEEDED(args->get_Uri(&raw_uri)) && raw_uri) {
+                  OpenPublicWebUri(window_, raw_uri);
+                }
+                if (raw_uri) CoTaskMemFree(raw_uri);
+                return S_OK;
+              })
+              .Get(),
+          &new_window_token_);
+      webview_->add_PermissionRequested(
+          Callback<ICoreWebView2PermissionRequestedEventHandler>(
+              [](ICoreWebView2*,
+                 ICoreWebView2PermissionRequestedEventArgs* args) -> HRESULT {
+                args->put_State(COREWEBVIEW2_PERMISSION_STATE_DENY);
+                return S_OK;
+              })
+              .Get(),
+          &permission_token_);
       webview_->AddWebResourceRequestedFilter(L"https://document.lwmd/*",
                                               COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
       webview_->add_WebResourceRequested(
@@ -127,7 +242,15 @@ void WebViewHost::Create(HWND window, const std::wstring& content_folder,
               .Get(),
           &resource_token_);
       webview_->add_WebMessageReceived(Callback<ICoreWebView2WebMessageReceivedEventHandler>([this](ICoreWebView2*, ICoreWebView2WebMessageReceivedEventArgs* args) -> HRESULT {
-        LPWSTR json = nullptr; if (SUCCEEDED(args->get_WebMessageAsJson(&json)) && json) { const auto request = WideToUtf8(json); CoTaskMemFree(json); if (on_message_) { const auto target = webview_; on_message_(request, [target](const std::string& reply) { if (!reply.empty() && target) { const auto wide_reply = Utf8ToWide(reply); target->PostWebMessageAsJson(wide_reply.c_str()); } }); } }
+        LPWSTR raw_source = nullptr;
+        if (FAILED(args->get_Source(&raw_source)) || !raw_source) {
+          if (raw_source) CoTaskMemFree(raw_source);
+          return S_OK;
+        }
+        const bool trusted = IsTrustedAppUri(raw_source);
+        CoTaskMemFree(raw_source);
+        if (!trusted) return S_OK;
+        LPWSTR json = nullptr; if (SUCCEEDED(args->get_WebMessageAsJson(&json)) && json) { const auto request = WideToUtf8(json); CoTaskMemFree(json); if (on_message_) { const auto target = webview_; on_message_(request, [target](const std::string& reply) { if (!reply.empty() && target) PostJsonToTrustedWebView(target.Get(), reply); }); } }
         return S_OK;
       }).Get(), &message_token_);
       Resize(); webview_->Navigate(L"https://app.lwmd/index.html"); return S_OK;
@@ -158,8 +281,6 @@ void WebViewHost::SetDocumentFolder(const std::wstring& document_path) {
   document_root_ = std::filesystem::path(document_path).parent_path();
 }
 bool WebViewHost::PostJson(const std::string& message) {
-  if (!webview_) return false;
-  const auto wide = Utf8ToWide(message);
-  return SUCCEEDED(webview_->PostWebMessageAsJson(wide.c_str()));
+  return PostJsonToTrustedWebView(webview_.Get(), message);
 }
 void WebViewHost::Resize() { if (!controller_ || !window_) return; RECT bounds{}; GetClientRect(window_, &bounds); controller_->put_Bounds(bounds); }

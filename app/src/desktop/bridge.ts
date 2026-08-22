@@ -32,9 +32,14 @@ declare global {
 
 const pending = new Map<
   string,
-  { resolve(value: unknown): void; reject(reason: BridgeError): void }
+  {
+    resolve(value: unknown): void;
+    reject(reason: BridgeError): void;
+    timeout: number;
+  }
 >();
 const eventListeners = new Map<string, Set<(payload: unknown) => void>>();
+const bridgeTimeoutMs = 60_000;
 let sequence = 0;
 
 export function decodeBridgeResponse(data: unknown): BridgeMessage | null {
@@ -60,6 +65,7 @@ if (window.chrome?.webview) {
     const request = pending.get(response.id);
     if (!request) return;
     pending.delete(response.id);
+    window.clearTimeout(request.timeout);
     if (response.ok) {
       request.resolve(response.result);
     } else {
@@ -97,7 +103,27 @@ export function invoke<T>(method: string, params?: unknown): Promise<T> {
     } satisfies BridgeError);
   const id = `req-${Date.now()}-${++sequence}`;
   return new Promise<T>((resolve, reject) => {
-    pending.set(id, { resolve: (value) => resolve(value as T), reject });
-    webview.postMessage({ type: "request", id, method, params });
+    const timeout = window.setTimeout(() => {
+      pending.delete(id);
+      reject({
+        code: "BRIDGE_TIMEOUT",
+        message: "桌面操作等待超时，请重试。",
+      } satisfies BridgeError);
+    }, bridgeTimeoutMs);
+    pending.set(id, {
+      resolve: (value) => resolve(value as T),
+      reject,
+      timeout,
+    });
+    try {
+      webview.postMessage({ type: "request", id, method, params });
+    } catch {
+      window.clearTimeout(timeout);
+      pending.delete(id);
+      reject({
+        code: "BRIDGE_SEND_FAILED",
+        message: "无法发送桌面操作请求。",
+      } satisfies BridgeError);
+    }
   });
 }

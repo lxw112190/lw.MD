@@ -1,5 +1,6 @@
 import Vditor from "vditor";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import packageInfo from "../package.json";
 import {
   MarkdownEditor,
   type MarkdownEditorHandle,
@@ -21,6 +22,9 @@ import {
 import { addRecentFile, fileNameFromPath } from "./document/recentFiles";
 import { getMarkdownOutline } from "./markdown/outline";
 
+const repositoryUrl = "https://github.com/lxw112190/lw.MD";
+const latestReleaseUrl = `${repositoryUrl}/releases/latest`;
+
 const defaultSettings: DesktopSettings = {
   theme: "system",
   outlineVisible: true,
@@ -36,6 +40,7 @@ export default function App() {
   const [settingsReady, setSettingsReady] = useState(false);
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const editor = useRef<MarkdownEditorHandle>(null);
   const printDocument = useRef<HTMLDivElement>(null);
   const outline = useMemo(
@@ -65,6 +70,7 @@ export default function App() {
   );
   const createNew = useCallback(() => {
     if (!confirmDiscard()) return;
+    void desktop.file.clearCurrent().catch(() => undefined);
     setDocument(createUntitledDocument());
     setStatus("新建文档");
   }, [confirmDiscard]);
@@ -104,7 +110,7 @@ export default function App() {
             ? await desktop.file.save(document.path, document.content)
             : await desktop.file.saveAs(
                 document.content,
-                document.name === "Untitled" ? "Untitled.md" : document.name,
+                document.name === "未命名" ? "未命名.md" : document.name,
               );
         if (result) {
           setDocument((current) =>
@@ -177,6 +183,7 @@ export default function App() {
       if (!confirmDiscard()) return;
       try {
         const content = await file.text();
+        await desktop.file.clearCurrent().catch(() => undefined);
         setDocument({
           path: null,
           name: file.name,
@@ -192,8 +199,17 @@ export default function App() {
     },
     [confirmDiscard],
   );
+  const openWebsite = useCallback(async (url: string, label: string) => {
+    try {
+      await desktop.app.openExternal(url);
+      setStatus(`已在浏览器打开${label}`);
+    } catch (error) {
+      setStatus(errorMessage(error));
+    }
+  }, []);
   useEffect(() => {
     window.document.title = title;
+    void desktop.app.setTitle(title).catch(() => undefined);
   }, [title]);
   useEffect(
     () =>
@@ -258,6 +274,14 @@ export default function App() {
     return () => media.removeEventListener("change", apply);
   }, [settings.theme]);
   useEffect(() => {
+    if (!aboutOpen) return;
+    const closeWithEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setAboutOpen(false);
+    };
+    window.addEventListener("keydown", closeWithEscape);
+    return () => window.removeEventListener("keydown", closeWithEscape);
+  }, [aboutOpen]);
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!event.ctrlKey) return;
       const key = event.key.toLowerCase();
@@ -286,52 +310,73 @@ export default function App() {
           <button onClick={createNew}>新建</button>
           <button onClick={() => void open()}>打开</button>
           <button onClick={() => void save()}>保存</button>
-          <button onClick={() => void save(true)}>另存为</button>
-          <button disabled={exportingPdf} onClick={() => void exportPdf()}>
-            {exportingPdf ? "正在导出…" : "导出 PDF"}
-          </button>
+          <details className="menu-dropdown" name="application-menu">
+            <summary>文件</summary>
+            <div className="menu-popover">
+              <button onClick={() => void save(true)}>另存为…</button>
+              <button disabled={exportingPdf} onClick={() => void exportPdf()}>
+                {exportingPdf ? "正在导出…" : "导出 PDF"}
+              </button>
+              {settings.recentFiles.length > 0 && (
+                <label>
+                  最近文件
+                  <select
+                    className="recent-select"
+                    value=""
+                    onChange={(event) => void openRecent(event.target.value)}
+                    aria-label="最近文件"
+                  >
+                    <option value="">请选择</option>
+                    {settings.recentFiles.map((path) => (
+                      <option key={path} value={path}>
+                        {fileNameFromPath(path)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+            </div>
+          </details>
+          <details className="menu-dropdown" name="application-menu">
+            <summary>视图</summary>
+            <div className="menu-popover">
+              <button
+                onClick={() =>
+                  setSettings((current) => ({
+                    ...current,
+                    outlineVisible: !current.outlineVisible,
+                  }))
+                }
+              >
+                {settings.outlineVisible ? "隐藏大纲" : "显示大纲"}
+              </button>
+              <label>
+                主题
+                <select
+                  className="theme-select"
+                  value={settings.theme}
+                  onChange={(event) =>
+                    setSettings((current) => ({
+                      ...current,
+                      theme: event.target.value as ThemeMode,
+                    }))
+                  }
+                  aria-label="主题"
+                >
+                  <option value="system">跟随系统</option>
+                  <option value="light">浅色</option>
+                  <option value="dark">深色</option>
+                </select>
+              </label>
+            </div>
+          </details>
           <button
-            onClick={() =>
-              setSettings((current) => ({
-                ...current,
-                outlineVisible: !current.outlineVisible,
-              }))
-            }
+            className="about-menu-button"
+            onClick={() => setAboutOpen(true)}
           >
-            {settings.outlineVisible ? "隐藏大纲" : "显示大纲"}
+            关于
           </button>
-          {settings.recentFiles.length > 0 && (
-            <select
-              className="recent-select"
-              value=""
-              onChange={(event) => void openRecent(event.target.value)}
-              aria-label="最近文件"
-            >
-              <option value="">最近文件</option>
-              {settings.recentFiles.map((path) => (
-                <option key={path} value={path}>
-                  {fileNameFromPath(path)}
-                </option>
-              ))}
-            </select>
-          )}
-          <select
-            className="theme-select"
-            value={settings.theme}
-            onChange={(event) =>
-              setSettings((current) => ({
-                ...current,
-                theme: event.target.value as ThemeMode,
-              }))
-            }
-            aria-label="主题"
-          >
-            <option value="system">跟随系统</option>
-            <option value="light">浅色</option>
-            <option value="dark">深色</option>
-          </select>
         </div>
-        <span className="document-name">{document.name}</span>
       </header>
       {settings.outlineVisible && (
         <OutlinePanel
@@ -352,11 +397,60 @@ export default function App() {
         />
       </section>
       <footer>
-        <span>{document.content.length} 字</span>
+        <span>{document.content.length} 字符</span>
         <span>Markdown</span>
         <span>{document.dirty ? "未保存" : "已保存"}</span>
         <span>{status}</span>
       </footer>
+      {aboutOpen && (
+        <div
+          className="about-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setAboutOpen(false);
+          }}
+        >
+          <section
+            className="about-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="about-title"
+          >
+            <button
+              className="about-close"
+              aria-label="关闭关于窗口"
+              onClick={() => setAboutOpen(false)}
+            >
+              ×
+            </button>
+            <img src="/app-icon.png" alt="" className="about-icon" />
+            <h2 id="about-title">lw.MD（简墨）</h2>
+            <p className="about-version">版本 {packageInfo.version}</p>
+            <p className="about-description">
+              简洁轻量的 Windows 本地 Markdown 编辑器
+            </p>
+            <div className="about-actions">
+              <button
+                className="primary"
+                onClick={() => void openWebsite(repositoryUrl, " GitHub")}
+              >
+                GitHub 项目主页
+              </button>
+              <button
+                onClick={() =>
+                  void openWebsite(latestReleaseUrl, "最新版本页面")
+                }
+              >
+                查看最新版本
+              </button>
+            </div>
+            <p className="about-meta">
+              作者：天天代码码天天
+              <br />
+              MIT License · Copyright © 2026
+            </p>
+          </section>
+        </div>
+      )}
       <article
         ref={printDocument}
         className="print-document vditor-reset"
@@ -368,7 +462,7 @@ export default function App() {
 
 function pdfName(documentName: string) {
   const base = documentName.replace(/\.(?:md|markdown)$/i, "").trim();
-  return `${base || "Untitled"}.pdf`;
+  return `${base || "未命名"}.pdf`;
 }
 
 async function waitForPrintAssets(target: HTMLElement) {
