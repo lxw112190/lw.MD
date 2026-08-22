@@ -1,19 +1,12 @@
-* text=auto
+# Keep repository text deterministic across Windows and Linux runners.
+* text=auto eol=lf
 
-*.yml text eol=lf
-*.yaml text eol=lf
-*.md text eol=lf
-*.json text eol=lf
-*.ts text eol=lf
-*.tsx text eol=lf
-*.css text eol=lf
-*.cpp text eol=lf
-*.h text eol=lf
+# Prefer native Windows line endings for PowerShell scripts.
 *.ps1 text eol=crlf
 
+# Binary assets must never be line-ending normalized.
 *.ico binary
 *.jpg binary
 *.png binary
 *.zip binary
 *.gz binary
-
