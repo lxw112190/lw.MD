@@ -136,6 +136,11 @@ jobs:
       contents: write
 
     steps:
+      - name: Check out release tag
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
       - name: Download release assets
         uses: actions/download-artifact@v7
         with:
