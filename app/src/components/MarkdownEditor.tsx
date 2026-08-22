@@ -14,6 +14,7 @@ export interface MarkdownEditorHandle {
   redo(): void;
   setValue(value: string): void;
   insertMarkdown(value: string): void;
+  revealText(text: string, occurrence: number, matchCase: boolean): boolean;
   scrollToHeading(text: string, occurrence: number): void;
   undo(): void;
 }
@@ -196,6 +197,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
       focus: () => editor.current?.focus(),
       getValue: () => editor.current?.getValue() ?? "",
       insertMarkdown: (nextValue) => editor.current?.insertMD(nextValue),
+      revealText: (text, occurrence, matchCase) =>
+        revealTextInEditor(container.current, text, occurrence, matchCase),
       redo: () => editor.current?.vditor.undo?.redo(editor.current.vditor),
       setValue: (nextValue) => {
         valueRef.current = nextValue;
@@ -230,3 +233,54 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     );
   },
 );
+
+function revealTextInEditor(
+  container: HTMLDivElement | null,
+  query: string,
+  occurrence: number,
+  matchCase: boolean,
+) {
+  const root = container?.querySelector<HTMLElement>(".vditor-ir");
+  if (!root || !query) return false;
+
+  const walker = window.document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const segments: Array<{ node: Text; start: number; end: number }> = [];
+  let content = "";
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const textNode = node as Text;
+    if (!textNode.data) continue;
+    const start = content.length;
+    content += textNode.data;
+    segments.push({ node: textNode, start, end: content.length });
+  }
+
+  const pattern = new RegExp(
+    query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+    matchCase ? "gu" : "giu",
+  );
+  const matches = Array.from(content.matchAll(pattern));
+  if (matches.length === 0) return false;
+  const selected = matches[occurrence % matches.length];
+  const start = selected.index;
+  const end = start + selected[0].length;
+  const startSegment = segments.find(
+    (segment) => start >= segment.start && start < segment.end,
+  );
+  const endSegment = segments.find(
+    (segment) => end > segment.start && end <= segment.end,
+  );
+  if (!startSegment || !endSegment) return false;
+
+  root.focus();
+  const range = window.document.createRange();
+  range.setStart(startSegment.node, start - startSegment.start);
+  range.setEnd(endSegment.node, end - endSegment.start);
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+  startSegment.node.parentElement?.scrollIntoView({
+    behavior: "smooth",
+    block: "center",
+  });
+  return true;
+}

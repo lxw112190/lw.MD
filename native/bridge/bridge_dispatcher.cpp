@@ -5,6 +5,7 @@
 #include "dialogs/file_dialog.h"
 #include "filesystem/file_service.h"
 #include "images/image_service.h"
+#include "recovery/recovery_service.h"
 #include "settings/settings.h"
 
 #include <Shellapi.h>
@@ -95,6 +96,14 @@ bool IsSimpleFileName(const std::wstring& value, const wchar_t* extension) {
          HasExtension(path, extension);
 }
 
+bool IsSimpleRecoveryName(const std::wstring& value) {
+  const fs::path path(value);
+  return !value.empty() && value.size() <= 255U && value != L"." &&
+         value != L".." && !HasUnsafePathCharacters(value) &&
+         !path.has_parent_path() && path.has_filename() &&
+         path.filename() == path;
+}
+
 bool SamePath(const std::wstring& left, const std::wstring& right) {
   if (left.empty() || right.empty()) return false;
   const auto normalized_left = fs::path(left).lexically_normal().wstring();
@@ -165,6 +174,31 @@ void ValidateSettingsUpdate(const json& params,
     }
     if (!allowed) throw std::invalid_argument("Recent file is not authorized");
   }
+}
+
+bool IsValidRecoverySnapshot(const RecoverySnapshot& snapshot) {
+  try {
+    const auto name = Utf8ToWide(snapshot.name);
+    if (!IsSimpleRecoveryName(name) ||
+        snapshot.content.size() > kMaxMarkdownBytes || snapshot.saved_at == 0) {
+      return false;
+    }
+    return !snapshot.document_path ||
+           (IsAbsoluteMarkdownPath(*snapshot.document_path) &&
+            _wcsicmp(fs::path(*snapshot.document_path).filename().c_str(),
+                     name.c_str()) == 0);
+  } catch (...) {
+    return false;
+  }
+}
+
+json RecoveryJson(const RecoverySnapshot& snapshot) {
+  return {{"path", snapshot.document_path
+                       ? json(WideToUtf8(*snapshot.document_path))
+                       : json(nullptr)},
+          {"name", snapshot.name},
+          {"content", snapshot.content},
+          {"savedAt", snapshot.saved_at}};
 }
 }  // namespace
 
@@ -279,6 +313,79 @@ void BridgeDispatcher::Dispatch(const std::string& raw, Reply reply) {
       } else {
         RemovePropW(owner_, kDirtyDocumentProperty);
       }
+      reply(Success(id, nullptr).dump());
+      return;
+    }
+    if (method == "recovery.get" || method == "recovery.restore") {
+      if (!params.empty()) {
+        reply(Error(id, "BRIDGE_INVALID_PARAMS", "Invalid recovery parameters")
+                  .dump());
+        return;
+      }
+      const auto snapshot = LoadRecoverySnapshot();
+      if (!snapshot || !IsValidRecoverySnapshot(*snapshot)) {
+        ClearRecoverySnapshot();
+        if (method == "recovery.restore") {
+          reply(Error(id, "RECOVERY_NOT_FOUND", "Recovery snapshot not found")
+                    .dump());
+        } else {
+          reply(Success(id, nullptr).dump());
+        }
+        return;
+      }
+      if (method == "recovery.restore") {
+        SetCurrentDocumentPath(snapshot->document_path
+                                   ? *snapshot->document_path
+                                   : std::wstring());
+      }
+      reply(Success(id, RecoveryJson(*snapshot)).dump());
+      return;
+    }
+    if (method == "recovery.save") {
+      if (params.size() != 3U || !params.contains("path") ||
+          !params.contains("name") || !params.contains("content")) {
+        reply(Error(id, "BRIDGE_INVALID_PARAMS", "Invalid recovery parameters")
+                  .dump());
+        return;
+      }
+      const auto name_utf8 = RequireString(params, "name", 1024U);
+      const auto name = Utf8ToWide(name_utf8);
+      const auto content =
+          RequireString(params, "content", kMaxMarkdownBytes, true);
+      if (!IsSimpleRecoveryName(name)) {
+        reply(Error(id, "INVALID_FILE_NAME", "Invalid recovery file name")
+                  .dump());
+        return;
+      }
+      std::optional<std::wstring> path;
+      if (params.at("path").is_string()) {
+        path = Utf8ToWide(RequireString(params, "path", kMaxPathBytes));
+        if (!SamePath(*path, current_document_path_) ||
+            !IsAbsoluteMarkdownPath(*path) ||
+            _wcsicmp(fs::path(*path).filename().c_str(), name.c_str()) != 0) {
+          reply(Error(id, "RECOVERY_ACCESS_DENIED",
+                      "Recovery path is not authorized")
+                    .dump());
+          return;
+        }
+      } else if (!params.at("path").is_null() ||
+                 !current_document_path_.empty()) {
+        reply(Error(id, "RECOVERY_ACCESS_DENIED",
+                    "Recovery path is not authorized")
+                  .dump());
+        return;
+      }
+      SaveRecoverySnapshot(RecoverySnapshot{path, name_utf8, content, 0});
+      reply(Success(id, nullptr).dump());
+      return;
+    }
+    if (method == "recovery.clear") {
+      if (!params.empty()) {
+        reply(Error(id, "BRIDGE_INVALID_PARAMS", "Invalid recovery parameters")
+                  .dump());
+        return;
+      }
+      ClearRecoverySnapshot();
       reply(Success(id, nullptr).dump());
       return;
     }

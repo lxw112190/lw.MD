@@ -20,6 +20,12 @@ export interface SavedImage {
 export interface DroppedImages {
   sourcePaths: string[];
 }
+export interface RecoverySnapshot {
+  path: string | null;
+  name: string;
+  content: string;
+  savedAt: number;
+}
 export type ThemeMode = "system" | "light" | "dark";
 export interface DesktopSettings {
   theme: ThemeMode;
@@ -64,5 +70,12 @@ export const desktop = {
       invoke<SavedImage[]>("image.import", { documentPath, sourcePaths }),
     onDropped: (listener: (images: DroppedImages) => void) =>
       subscribeDesktopEvent("image.dropped", listener),
+  },
+  recovery: {
+    get: () => invoke<RecoverySnapshot | null>("recovery.get"),
+    restore: () => invoke<RecoverySnapshot>("recovery.restore"),
+    save: (snapshot: Pick<RecoverySnapshot, "path" | "name" | "content">) =>
+      invoke<void>("recovery.save", snapshot),
+    clear: () => invoke<void>("recovery.clear"),
   },
 };

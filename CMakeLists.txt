@@ -66,7 +66,8 @@ set_source_files_properties("${LWMD_GENERATED_DIR}/frontend_bundle.rc"
 add_executable(lw_md WIN32
   native/app/main.cpp native/app/main_window.cpp native/bridge/bridge_dispatcher.cpp
   native/filesystem/file_service.cpp native/dialogs/file_dialog.cpp native/settings/settings.cpp
-  native/images/image_service.cpp native/resources/frontend_bundle.cpp native/webview/webview_host.cpp resources/lw-md.rc
+  native/images/image_service.cpp native/recovery/recovery_service.cpp
+  native/resources/frontend_bundle.cpp native/webview/webview_host.cpp resources/lw-md.rc
   resources/version.rc "${LWMD_GENERATED_DIR}/frontend_bundle.rc")
 add_dependencies(lw_md lwmd_frontend_bundle)
 target_include_directories(lw_md PRIVATE native ${WEBVIEW2_INCLUDE})
@@ -78,10 +79,11 @@ set_target_properties(lw_md PROPERTIES OUTPUT_NAME "lw.MD")
 
 include(CTest)
 if(BUILD_TESTING)
-  add_executable(lw_md_native_tests tests/native_tests.cpp native/filesystem/file_service.cpp native/images/image_service.cpp)
+  add_executable(lw_md_native_tests tests/native_tests.cpp native/filesystem/file_service.cpp
+    native/images/image_service.cpp native/recovery/recovery_service.cpp)
   target_include_directories(lw_md_native_tests PRIVATE native)
   target_compile_definitions(lw_md_native_tests PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
   target_compile_options(lw_md_native_tests PRIVATE /W4 /permissive- /utf-8 /EHsc)
-  target_link_libraries(lw_md_native_tests PRIVATE crypt32)
+  target_link_libraries(lw_md_native_tests PRIVATE nlohmann_json::nlohmann_json crypt32 shell32 ole32)
   add_test(NAME lw_md_native_tests COMMAND lw_md_native_tests)
 endif()

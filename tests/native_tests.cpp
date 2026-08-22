@@ -1,5 +1,6 @@
 #include "filesystem/file_service.h"
 #include "images/image_service.h"
+#include "recovery/recovery_service.h"
 
 #include <Windows.h>
 #include <filesystem>
@@ -28,10 +29,19 @@ int main() {
   const auto imported = ImportImageFiles(file.wstring(), {source.wstring(), source.wstring()});
   if (imported.size() != 2 || imported[0].relative_path == imported[1].relative_path) return 7;
   if (!IsSupportedImagePath(L"示例.JPEG") || IsSupportedImagePath(L"示例.txt")) return 8;
-  std::filesystem::remove_all(directory / L"assets");
-  std::filesystem::remove(source);
-  std::filesystem::remove(file);
-  std::filesystem::remove(directory);
+  const auto snapshot_path = directory / L"recovery" / L"current.json";
+  SaveRecoverySnapshotTo(
+      snapshot_path,
+      RecoverySnapshot{file.wstring(), "中文-atomic.md", "未保存的恢复内容", 123456U});
+  if (ReadUtf8File(file.wstring()) != second) return 9;
+  const auto snapshot = LoadRecoverySnapshotFrom(snapshot_path);
+  if (!snapshot || snapshot->document_path != file.wstring() ||
+      snapshot->name != "中文-atomic.md" ||
+      snapshot->content != "未保存的恢复内容" ||
+      snapshot->saved_at != 123456U) return 10;
+  ClearRecoverySnapshotAt(snapshot_path);
+  if (std::filesystem::exists(snapshot_path)) return 11;
+  std::filesystem::remove_all(directory);
   std::cout << "native file tests passed\n";
   return 0;
 }

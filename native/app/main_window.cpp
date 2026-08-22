@@ -4,6 +4,7 @@
 #include "common/utf8.h"
 #include "filesystem/file_service.h"
 #include "images/image_service.h"
+#include "recovery/recovery_service.h"
 #include "resources/frontend_bundle.h"
 #include "settings/settings.h"
 #include "webview/webview_host.h"
@@ -146,9 +147,12 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
       }
       return 0;
     case WM_CLOSE:
-      if (GetPropW(window, kDirtyDocumentProperty) &&
-          MessageBoxW(window, L"当前文档有尚未保存的修改。\n\n确定退出并放弃这些修改吗？",
-                      L"lw.MD — 未保存", MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2) != IDYES) return 0;
+      if (GetPropW(window, kDirtyDocumentProperty)) {
+        if (MessageBoxW(window, L"当前文档有尚未保存的修改。\n\n确定退出并放弃这些修改吗？",
+                        L"lw.MD — 未保存", MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2) != IDYES) return 0;
+        try { ClearRecoverySnapshot(); }
+        catch (...) {}
+      }
       DestroyWindow(window); return 0;
     case WM_DESTROY:
       RemovePropW(window, kDirtyDocumentProperty);

@@ -13,6 +13,8 @@ A clean and lightweight local Markdown editor for Windows. It is built with Reac
 - Drag and drop for Markdown files and images, plus clipboard image pasting
 - Automatic management of the `assets` image directory beside each Markdown document
 - Document outline, recent files, and light, dark, or system-following themes
+- Find, replace, case-sensitive matching, and keyboard navigation
+- Periodic recovery snapshots stored separately from the original Markdown file
 - Persistent window position, size, and maximized state
 - A4 PDF export
 - Fully offline frontend assets; end users do not need Node.js

@@ -1,7 +1,8 @@
 :root {
+  --ui-font: "Microsoft YaHei UI", system-ui, sans-serif;
   color: #202124;
   background: #fafaf9;
-  font-family: "Microsoft YaHei UI", system-ui, sans-serif;
+  font-family: var(--ui-font);
 }
 * {
   box-sizing: border-box;
@@ -49,6 +50,7 @@ button {
   color: #44403c;
   cursor: pointer;
   border-radius: 5px;
+  font: inherit;
 }
 button:hover {
   background: #f0eeeb;
@@ -60,8 +62,18 @@ button:disabled {
 .menu-dropdown {
   position: relative;
 }
+.menu > button,
+.menu-dropdown > summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 34px;
+  padding: 0 8px;
+  font: 400 13px/20px var(--ui-font);
+  letter-spacing: 0;
+}
 .menu-dropdown summary {
-  padding: 7px 10px;
   border-radius: 5px;
   color: #44403c;
   cursor: pointer;
@@ -88,9 +100,30 @@ button:disabled {
   background: #fff;
   box-shadow: 0 12px 35px rgb(28 25 23 / 16%);
 }
+.menu-popover::before {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  height: 8px;
+  content: "";
+}
 .menu-popover button {
   width: 100%;
+  font: 400 13px/20px var(--ui-font);
+  letter-spacing: 0;
   text-align: left;
+}
+.edit-menu-popover button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.edit-menu-popover kbd {
+  color: #a8a29e;
+  font:
+    11px/1 system-ui,
+    sans-serif;
 }
 .menu-popover label {
   display: grid;
@@ -114,6 +147,176 @@ button:disabled {
 }
 .recent-select {
   width: 100%;
+}
+.find-panel {
+  position: fixed;
+  z-index: 70;
+  top: 60px;
+  right: 16px;
+  display: grid;
+  gap: 8px;
+  width: min(440px, calc(100vw - 32px));
+  padding: 10px;
+  border: 1px solid #dedbd7;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 14px 40px rgb(28 25 23 / 18%);
+}
+.find-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.find-row > input {
+  min-width: 0;
+  height: 34px;
+  flex: 1;
+  border: 1px solid #d6d3d1;
+  border-radius: 6px;
+  padding: 0 10px;
+  color: #292524;
+  background: #fff;
+  font: inherit;
+  outline: none;
+}
+.find-row > input:focus {
+  border-color: #14a780;
+  box-shadow: 0 0 0 2px rgb(20 167 128 / 14%);
+}
+.find-count {
+  min-width: 42px;
+  color: #78716c;
+  font-size: 11px;
+  text-align: center;
+}
+.find-icon-button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 16px;
+}
+.find-close {
+  font-size: 20px;
+}
+.replace-row button {
+  height: 32px;
+  padding: 0 9px;
+  border: 1px solid #e7e5e4;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.find-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #78716c;
+  font-size: 12px;
+}
+.find-options label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+.find-options input {
+  accent-color: #0f9f7a;
+}
+.find-replace-toggle {
+  padding: 4px 7px;
+  color: #78716c;
+  font-size: 12px;
+}
+.recovery-backdrop {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(28 25 23 / 46%);
+  backdrop-filter: blur(2px);
+}
+.recovery-dialog {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 12px 14px;
+  width: min(500px, 100%);
+  padding: 24px;
+  border: 1px solid #e7e5e4;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgb(28 25 23 / 26%);
+}
+.recovery-badge {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 11px;
+  color: #08745b;
+  background: #dff9ef;
+  font-size: 25px;
+  line-height: 1;
+}
+.recovery-dialog h2 {
+  margin: 1px 0 7px;
+  color: #1c1917;
+  font-size: 18px;
+}
+.recovery-dialog p {
+  margin: 0;
+  color: #78716c;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.recovery-dialog strong {
+  color: #57534e;
+}
+.recovery-details {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 7px;
+  margin: 2px 0 0;
+  padding: 12px 14px;
+  border-radius: 9px;
+  background: #f7f6f4;
+}
+.recovery-details > div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px;
+}
+.recovery-details dt,
+.recovery-details dd {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.recovery-details dt {
+  color: #a8a29e;
+}
+.recovery-details dd {
+  overflow: hidden;
+  color: #57534e;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recovery-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 2px;
+}
+.recovery-actions button {
+  min-width: 92px;
+  border: 1px solid #d6d3d1;
+  padding: 8px 14px;
+}
+.recovery-actions .primary {
+  border-color: #0f9f7a;
+  color: #08745b;
+  background: #ecfdf7;
 }
 .about-backdrop {
   position: fixed;
@@ -420,6 +623,60 @@ footer span:first-child {
   border-color: #404040;
   background: #242424;
   box-shadow: 0 12px 35px rgb(0 0 0 / 35%);
+}
+:root[data-theme="dark"] .find-panel {
+  border-color: #404040;
+  background: #242424;
+  box-shadow: 0 14px 40px rgb(0 0 0 / 42%);
+}
+:root[data-theme="dark"] .find-row > input {
+  border-color: #525252;
+  color: #f5f5f4;
+  background: #1c1c1c;
+}
+:root[data-theme="dark"] .find-row > input:focus {
+  border-color: #2dd4bf;
+  box-shadow: 0 0 0 2px rgb(45 212 191 / 15%);
+}
+:root[data-theme="dark"] .find-count,
+:root[data-theme="dark"] .find-options,
+:root[data-theme="dark"] .find-replace-toggle,
+:root[data-theme="dark"] .edit-menu-popover kbd {
+  color: #a8a29e;
+}
+:root[data-theme="dark"] .replace-row button {
+  border-color: #525252;
+}
+:root[data-theme="dark"] .recovery-dialog {
+  border-color: #404040;
+  background: #242424;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 48%);
+}
+:root[data-theme="dark"] .recovery-badge {
+  color: #99f6e4;
+  background: #143d35;
+}
+:root[data-theme="dark"] .recovery-dialog h2 {
+  color: #f5f5f4;
+}
+:root[data-theme="dark"] .recovery-dialog p,
+:root[data-theme="dark"] .recovery-details dt {
+  color: #a8a29e;
+}
+:root[data-theme="dark"] .recovery-dialog strong,
+:root[data-theme="dark"] .recovery-details dd {
+  color: #d6d3d1;
+}
+:root[data-theme="dark"] .recovery-details {
+  background: #1c1c1c;
+}
+:root[data-theme="dark"] .recovery-actions button {
+  border-color: #525252;
+}
+:root[data-theme="dark"] .recovery-actions .primary {
+  border-color: #12856b;
+  color: #99f6e4;
+  background: #143d35;
 }
 :root[data-theme="dark"] .outline-title {
   color: #d6d3d1;
