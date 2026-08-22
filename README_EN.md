@@ -2,75 +2,119 @@
 
 [简体中文](README.md) | [English](README_EN.md)
 
+[![Windows CI](https://github.com/lxw112190/lw.MD/actions/workflows/windows.yml/badge.svg)](https://github.com/lxw112190/lw.MD/actions/workflows/windows.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-2ea44f.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078d4.svg)](https://github.com/lxw112190/lw.MD/releases)
+
 <img src="docs/assets/lw-md-banner.png" alt="lw.MD / Jianmo" width="760">
 
-A clean and lightweight local Markdown editor for Windows. It is built with React, TypeScript, Vditor, C++17, and WebView2, and distributed as a single portable EXE.
+**lw.MD (Jianmo)** is a clean, lightweight, local-first Markdown editor for Windows. It is built with React, TypeScript, Vditor, C++17, and WebView2, and distributed as a single portable EXE.
 
 ## Features
 
 - Instant-rendering Markdown editing with Vditor IR mode
 - New, open, atomic UTF-8 save, and Save As operations
+- Find, replace, case-sensitive matching, and result navigation
 - Drag and drop for Markdown files and images, plus clipboard image pasting
-- Automatic management of the `assets` image directory beside each Markdown document
+- Automatic management of the `assets` image directory beside each document
 - Document outline, recent files, and light, dark, or system-following themes
-- Find, replace, case-sensitive matching, and keyboard navigation
-- Periodic recovery snapshots stored separately from the original Markdown file
-- Persistent window position, size, and maximized state
+- Periodic recovery snapshots for restoring unsaved work after an unexpected exit
 - A4 PDF export
+- Persistent window position, size, and maximized state
 - Fully offline frontend assets; end users do not need Node.js
+- WebView2 bridge origin checks, navigation restrictions, and parameter validation
 
-> When a Markdown file is dropped into the workspace, WebView2 can read its contents but cannot obtain its original disk path. The file is therefore loaded as an unsaved document and requires a location on first save. Dropping it onto the window title bar opens it from its original path.
+## Quick Start
 
-## Download
+1. Download the latest `lw.MD-windows-x64.zip` from [Releases](https://github.com/lxw112190/lw.MD/releases).
+2. Extract the archive and run `lw.MD.exe`.
+3. Select **Open**, or drag a Markdown file into the window.
+4. Use **File → Export PDF** to create an A4 PDF.
 
-- After each GitHub Actions build, download `lw.MD-windows-x64` from the **Artifacts** section of the corresponding workflow run.
-- Pushing a `v*` tag automatically creates a GitHub Release with a portable ZIP and its SHA-256 checksum file.
-- End users need Windows 10/11 x64 and the Microsoft Edge WebView2 Evergreen Runtime.
-- CI-generated executables are not commercially code-signed, so Windows SmartScreen may display a warning on first launch.
+Requirements:
 
-## Development
+- Windows 10/11 x64
+- Microsoft Edge WebView2 Evergreen Runtime
+
+CI-generated executables are not commercially code-signed, so Windows SmartScreen may display a warning on first launch.
+
+## Keyboard Shortcuts
+
+| Action | Shortcut |
+| --- | --- |
+| New | `Ctrl+N` |
+| Open | `Ctrl+O` |
+| Save | `Ctrl+S` |
+| Save As | `Ctrl+Shift+S` |
+| Find | `Ctrl+F` |
+| Replace | `Ctrl+H` |
+| Next match | `Enter` |
+| Previous match | `Shift+Enter` |
+| Close the find panel | `Esc` |
+
+## Recovery Snapshots
+
+When a document has unsaved changes, lw.MD creates a recovery snapshot about 1.5 seconds after typing stops and updates it every 15 seconds when the content changes.
+
+- Snapshots are stored separately at `%LOCALAPPDATA%\lw.MD\recovery\current.json`.
+- A snapshot never overwrites the original Markdown file.
+- After an unexpected exit, the next launch offers to restore or discard the snapshot.
+- Restored content remains marked as unsaved, leaving the save decision to the user.
+- Saving normally or explicitly discarding changes removes the snapshot.
+
+## Drag and Drop
+
+- Drop onto the window title bar to open a Markdown file from its original disk path.
+- Drop into the editor workspace to load the file contents as an unsaved document. WebView2 cannot expose the original disk path in this case, so the first save requires a location.
+- After the document is saved, dropped or pasted images are copied into the adjacent `assets` directory and inserted with relative paths.
+
+## Build from Source
+
+Node.js 20.19+, CMake 3.22+, Visual Studio 2022, and the Windows SDK are required.
 
 ```powershell
 npm ci --prefix app
 npm run check
-cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DBUILD_TESTING=ON
 cmake --build build --config Release
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-The build automatically generates the production frontend, compresses it into a ZIP archive, and embeds it in the executable. The only file required for distribution is:
+Output:
 
 ```text
-build\\Release\\lw.MD.exe
+build\Release\lw.MD.exe
 ```
 
-Recipients do not need `app/`, `dist/`, Node.js, or npm. On first launch, the embedded frontend is safely extracted by content hash to `%LOCALAPPDATA%\\lw.MD\\frontend\\`; subsequent launches reuse the cache.
+The build compresses the production frontend and embeds it in the executable. Only `lw.MD.exe` is required for distribution; recipients do not need `app/`, `dist/`, Node.js, or npm.
 
-The main project code is located in `app/` and `native/`.
+At runtime, the embedded frontend is extracted by content hash to `%LOCALAPPDATA%\lw.MD\frontend\`. This directory is only an internal runtime cache—the distributed application remains a single EXE.
+
+Main project directories:
+
+- `app/`: React, TypeScript, and Vditor frontend
+- `native/`: C++17 WebView2 host, file bridge, and recovery service
+- `tests/`: native file and recovery tests
+- `.github/workflows/`: Windows CI and automated releases
 
 ## CI and Releases
 
-`.github/workflows/windows.yml` runs the following steps on Windows x64:
+Every push runs frontend checks, the Release build, and native tests. A downloadable `lw.MD-windows-x64` artifact is produced in GitHub Actions.
 
-1. Install locked frontend dependencies and run type, lint, formatting, and unit checks.
-2. Build the native Release configuration with Visual Studio 2022.
-3. Run CTest.
-4. Create a portable package containing the EXE, Chinese and English READMEs, licenses, and checksums.
-
-Create and push a version tag to publish a release automatically:
+Pushing a `v*` tag that matches the project version automatically creates a GitHub Release and uploads the portable ZIP and SHA-256 checksum:
 
 ```powershell
-git tag v0.3.0-beta.1
-git push origin v0.3.0-beta.1
+git tag -a v0.3.0 -m "lw.MD v0.3.0"
+git push origin v0.3.0
 ```
 
-Tags with suffixes such as `-beta` or `-rc` are automatically published as GitHub pre-releases, for example `v0.3.0-beta.1`.
+Tags with suffixes such as `v0.3.0-beta.1` or `v0.3.0-rc.1` are automatically published as GitHub pre-releases.
 
 To debug WebView2 locally, set `LWMD_ENABLE_DEVTOOLS=1` before launching the application. Developer tools are disabled by default in production builds.
 
 ## License
 
-The project source code is licensed under the [MIT License](LICENSE). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for third-party component notices.
+The project source is licensed under the [MIT License](LICENSE). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for third-party component notices.
 
 ## Contact and Support
 

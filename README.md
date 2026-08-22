@@ -2,69 +2,113 @@
 
 [简体中文](README.md) | [English](README_EN.md)
 
+[![Windows CI](https://github.com/lxw112190/lw.MD/actions/workflows/windows.yml/badge.svg)](https://github.com/lxw112190/lw.MD/actions/workflows/windows.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-2ea44f.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078d4.svg)](https://github.com/lxw112190/lw.MD/releases)
+
 <img src="docs/assets/lw-md-banner.png" alt="lw.MD（简墨）" width="760">
 
-一个简洁轻量的 Windows 本地 Markdown 桌面编辑器。使用 React、TypeScript、Vditor、C++17 和 WebView2 构建，最终以单个便携 EXE 分发。
+**lw.MD（简墨）** 是一个简洁、轻量、本地优先的 Windows Markdown 编辑器。项目使用 React、TypeScript、Vditor、C++17 和 WebView2 构建，最终以单个便携 EXE 分发。
 
-## 功能
+## 主要功能
 
 - Vditor IR 即时渲染 Markdown 编辑
 - 新建、打开、UTF-8 原子保存和另存为
+- 查找、替换、区分大小写及上下匹配导航
 - Markdown 与图片拖放、剪贴板图片粘贴
 - 自动管理 Markdown 同目录下的 `assets` 图片目录
-- 文档大纲、最近文件、浅色/深色/跟随系统主题
-- 查找、替换、区分大小写和快捷键导航
-- 定时恢复快照；快照独立保存，不覆盖原 Markdown 文件
-- 窗口位置、大小和最大化状态记忆
+- 文档大纲、最近文件、浅色、深色及跟随系统主题
+- 定时恢复快照，异常退出后可恢复未保存内容
 - A4 PDF 导出
-- 离线前端资源，最终用户不需要安装 Node.js
+- 窗口位置、尺寸和最大化状态记忆
+- 前端资源完全离线，最终用户无需安装 Node.js
+- WebView2 原生桥接来源校验、导航限制和参数校验
 
-> 工作区内拖入 Markdown 时，WebView2 只能读取文件内容，不能获得原始磁盘路径，因此会作为未保存文档载入，首次保存需要选择位置。拖到窗口标题栏则按原路径打开。
+## 快速开始
 
-## 下载
+1. 从 [Releases](https://github.com/lxw112190/lw.MD/releases) 下载最新的 `lw.MD-windows-x64.zip`。
+2. 解压后运行 `lw.MD.exe`。
+3. 点击“打开”，或者将 Markdown 文件拖入窗口。
+4. 使用“文件 → 导出 PDF”生成 A4 PDF。
 
-- 每次 GitHub Actions 构建完成后，可在对应运行页面的 **Artifacts** 区域下载 `lw.MD-windows-x64`。
-- 推送 `v*` 标签后，CI 会自动创建 GitHub Release，并附带便携 ZIP 和 SHA-256 校验文件。
-- 最终用户需要 Windows 10/11 x64 和 Microsoft Edge WebView2 Evergreen Runtime。
-- CI 生成的 EXE 暂未进行商业代码签名，Windows SmartScreen 可能在首次运行时显示提示。
+运行环境：
 
-## 开发
+- Windows 10/11 x64
+- Microsoft Edge WebView2 Evergreen Runtime
+
+CI 生成的 EXE 暂未进行商业代码签名，因此 Windows SmartScreen 首次运行时可能显示安全提示。
+
+## 快捷键
+
+| 功能 | 快捷键 |
+| --- | --- |
+| 新建 | `Ctrl+N` |
+| 打开 | `Ctrl+O` |
+| 保存 | `Ctrl+S` |
+| 另存为 | `Ctrl+Shift+S` |
+| 查找 | `Ctrl+F` |
+| 替换 | `Ctrl+H` |
+| 下一个匹配项 | `Enter` |
+| 上一个匹配项 | `Shift+Enter` |
+| 关闭查找面板 | `Esc` |
+
+## 恢复快照
+
+编辑未保存内容时，lw.MD 会在停止输入约 1.5 秒后创建恢复快照，并在内容变化时每 15 秒更新一次。
+
+- 快照独立保存在 `%LOCALAPPDATA%\lw.MD\recovery\current.json`。
+- 快照不会覆盖原 Markdown 文件。
+- 异常退出后，下次启动会提示恢复或放弃快照。
+- 恢复的内容仍标记为“未保存”，是否写入原文件由用户决定。
+- 正常保存或明确放弃修改后，快照会自动清理。
+
+## 拖放说明
+
+- 拖到窗口标题栏：按原磁盘路径打开 Markdown 文件。
+- 拖到编辑工作区：WebView2 只能读取文件内容，无法获得原始磁盘路径，因此会作为未保存文档载入，首次保存时需要选择位置。
+- 拖入或粘贴图片：保存文档后，图片会复制到 Markdown 同目录的 `assets` 文件夹，并自动插入相对路径。
+
+## 从源码构建
+
+需要 Node.js 20.19+、CMake 3.22+、Visual Studio 2022 和 Windows SDK。
 
 ```powershell
 npm ci --prefix app
 npm run check
-cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DBUILD_TESTING=ON
 cmake --build build --config Release
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-构建过程会自动生成前端生产资源、压缩为 ZIP 并嵌入 EXE。最终分发时只需发送：
+生成文件：
 
 ```text
-build\\Release\\lw.MD.exe
+build\Release\lw.MD.exe
 ```
 
-接收方不需要 `app/`、`dist/`、Node.js 或 npm。首次运行时，内嵌前端会按内容哈希安全解压到 `%LOCALAPPDATA%\\lw.MD\\frontend\\`，后续启动直接复用缓存。
+构建过程会将前端生产资源压缩并嵌入 EXE。分发时只需提供 `lw.MD.exe`；接收方不需要 `app/`、`dist/`、Node.js 或 npm。
 
-项目代码主要位于 `app/` 和 `native/`。
+运行时，内嵌前端会按内容哈希解压到 `%LOCALAPPDATA%\lw.MD\frontend\`。该目录仅作为内部运行缓存，用户分发和携带的仍然只有一个 EXE。
+
+项目代码主要位于：
+
+- `app/`：React、TypeScript 和 Vditor 前端
+- `native/`：C++17、WebView2 宿主、文件桥接和恢复服务
+- `tests/`：原生文件与恢复测试
+- `.github/workflows/`：Windows CI 和自动发布流程
 
 ## CI 与发布
 
-`.github/workflows/windows.yml` 会在 Windows x64 环境执行：
+每次推送都会执行前端检查、Release 构建和原生测试，并在 GitHub Actions 的 **Artifacts** 中生成可下载的 `lw.MD-windows-x64`。
 
-1. 安装锁定的前端依赖并运行类型、规范、格式和单元测试。
-2. 使用 Visual Studio 2022 构建原生 Release。
-3. 运行 CTest。
-4. 生成包含 EXE、中英文 README、许可证和校验值的便携包。
-
-创建版本标签即可自动发布：
+推送与项目版本一致的 `v*` 标签后，CI 会自动创建 GitHub Release，并上传便携 ZIP 和 SHA-256 校验文件：
 
 ```powershell
-git tag v0.3.0-beta.1
-git push origin v0.3.0-beta.1
+git tag -a v0.3.0 -m "lw.MD v0.3.0"
+git push origin v0.3.0
 ```
 
-包含 `-beta`、`-rc` 等后缀的标签会自动发布为 GitHub Pre-release，例如 `v0.3.0-beta.1`。
+使用 `v0.3.0-beta.1`、`v0.3.0-rc.1` 等带后缀的标签时，会自动发布为 GitHub Pre-release。
 
 如需本地调试 WebView2，可在启动前设置 `LWMD_ENABLE_DEVTOOLS=1`；正式构建默认禁用开发者工具。
 
