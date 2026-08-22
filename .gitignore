@@ -1,0 +1,29 @@
+# Local-only project notes, reference material, QA artifacts, and release packages
+/_local/
+
+# Build outputs and downloaded dependencies
+/build/
+/out/
+/output/
+/.deps/
+/artifacts/
+
+# Frontend dependencies and generated files
+/app/node_modules/
+/app/dist/
+/app/public/vditor/
+
+# IDE, local environment, and operating-system files
+/.vs/
+/.vscode/
+/.idea/
+*.user
+*.suo
+*.VC.db
+*.log
+*.tmp
+.env
+.env.*
+!.env.example
+Thumbs.db
+.DS_Store

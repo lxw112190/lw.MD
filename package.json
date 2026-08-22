@@ -1,0 +1,13 @@
+{
+  "name": "lw-md",
+  "private": true,
+  "version": "0.3.0",
+  "scripts": {
+    "dev": "npm --prefix app run dev",
+    "build": "npm --prefix app run build",
+    "typecheck": "npm --prefix app run typecheck",
+    "lint": "npm --prefix app run lint",
+    "test": "npm --prefix app run test",
+    "check": "npm --prefix app run check"
+  }
+}

@@ -1,0 +1,135 @@
+name: Windows CI
+
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+
+jobs:
+  build:
+    name: Build Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Verify release tag version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $tagVersion = $env:GITHUB_REF_NAME -replace '^v', '' -replace '-.*$', ''
+          $cmake = Get-Content -LiteralPath "CMakeLists.txt" -Raw
+          if ($cmake -notmatch 'project\(lw_MD VERSION ([0-9]+\.[0-9]+\.[0-9]+)') {
+            throw "Cannot read project version from CMakeLists.txt"
+          }
+          $projectVersion = $Matches[1]
+          $frontendVersion = (Get-Content -LiteralPath "app/package.json" -Raw | ConvertFrom-Json).version
+          if ($tagVersion -ne $projectVersion -or $tagVersion -ne $frontendVersion) {
+            throw "Tag version $tagVersion does not match project version $projectVersion / frontend version $frontendVersion"
+          }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix app
+
+      - name: Check frontend
+        run: npm run check
+
+      - name: Configure native build
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DBUILD_TESTING=ON
+
+      - name: Build Release
+        run: cmake --build build --config Release --parallel
+
+      - name: Run native tests
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Create portable package
+        shell: pwsh
+        run: |
+          $packageDirectory = "artifacts/package"
+          New-Item -ItemType Directory -Force -Path $packageDirectory | Out-Null
+          Copy-Item -LiteralPath "build/Release/lw.MD.exe" -Destination $packageDirectory
+          Copy-Item -LiteralPath "README.md" -Destination $packageDirectory
+          Copy-Item -LiteralPath "README_EN.md" -Destination $packageDirectory
+          Copy-Item -LiteralPath "LICENSE" -Destination $packageDirectory
+          Copy-Item -LiteralPath "THIRD_PARTY_NOTICES.md" -Destination $packageDirectory
+          New-Item -ItemType Directory -Force -Path "$packageDirectory/docs" | Out-Null
+          Copy-Item -LiteralPath "docs/assets" -Destination "$packageDirectory/docs" -Recurse
+
+          $exeHash = (Get-FileHash -LiteralPath "$packageDirectory/lw.MD.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$exeHash  lw.MD.exe" | Out-File -LiteralPath "$packageDirectory/lw.MD.exe.sha256" -Encoding ascii
+
+          Compress-Archive -Path "$packageDirectory/*" -DestinationPath "artifacts/lw.MD-windows-x64.zip" -CompressionLevel Optimal
+          $zipHash = (Get-FileHash -LiteralPath "artifacts/lw.MD-windows-x64.zip" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$zipHash  lw.MD-windows-x64.zip" | Out-File -LiteralPath "artifacts/lw.MD-windows-x64.zip.sha256" -Encoding ascii
+
+      - name: Upload portable package
+        uses: actions/upload-artifact@v7
+        with:
+          name: lw.MD-windows-x64
+          path: artifacts/package/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload release assets
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v7
+        with:
+          name: lw.MD-release-assets
+          path: |
+            artifacts/lw.MD-windows-x64.zip
+            artifacts/lw.MD-windows-x64.zip.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download release assets
+        uses: actions/download-artifact@v7
+        with:
+          name: lw.MD-release-assets
+          path: release-assets
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=()
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            prerelease+=(--prerelease)
+          fi
+          gh release create "$GITHUB_REF_NAME" \
+            release-assets/lw.MD-windows-x64.zip \
+            release-assets/lw.MD-windows-x64.zip.sha256 \
+            --verify-tag \
+            --generate-notes \
+            --title "lw.MD $GITHUB_REF_NAME" \
+            "${prerelease[@]}"

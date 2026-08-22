@@ -1,0 +1,19 @@
+* text=auto
+
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.css text eol=lf
+*.cpp text eol=lf
+*.h text eol=lf
+*.ps1 text eol=crlf
+
+*.ico binary
+*.jpg binary
+*.png binary
+*.zip binary
+*.gz binary
+
