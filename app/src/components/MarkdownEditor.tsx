@@ -80,6 +80,10 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
           queueMicrotask(() => {
             const current = editor.current;
             if (!current) return;
+            const latestValue = valueRef.current;
+            if (current.getValue() !== latestValue) {
+              current.setValue(latestValue, true);
+            }
             readyRef.current = true;
             const currentTheme = themeRef.current;
             current.setTheme(
@@ -89,6 +93,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
             current.focus();
           }),
         input: (nextValue) => {
+          if (!readyRef.current) return;
           valueRef.current = nextValue;
           onChange(nextValue);
         },
@@ -101,10 +106,9 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
       };
     }, [onChange]);
     useEffect(() => {
-      if (value !== valueRef.current && editor.current) {
-        valueRef.current = value;
-        editor.current.setValue(value, true);
-      }
+      if (value === valueRef.current) return;
+      valueRef.current = value;
+      if (readyRef.current) editor.current?.setValue(value, true);
     }, [value]);
 
     useEffect(() => {

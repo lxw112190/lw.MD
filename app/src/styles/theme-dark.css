@@ -1,0 +1,332 @@
+:root[data-theme="dark"] {
+  color: #e7e5e4;
+  background: #141414;
+  color-scheme: dark;
+}
+
+:root[data-theme="dark"] header,
+:root[data-theme="dark"] footer,
+:root[data-theme="dark"] .outline-panel,
+:root[data-theme="dark"] .markdown-editor .vditor-toolbar {
+  background: #1c1c1c;
+  border-color: #2b2b2b;
+}
+
+:root[data-theme="dark"] .editor-area {
+  background: #141414;
+}
+
+:root[data-theme="dark"] .markdown-editor.vditor,
+:root[data-theme="dark"] .markdown-editor .vditor-content,
+:root[data-theme="dark"] .markdown-editor .vditor-ir {
+  background: #181818;
+}
+
+:root[data-theme="dark"] .markdown-editor.vditor {
+  --blockquote-color: #a8a29e;
+  --heading-border-color: #343434;
+  --panel-background-color: #181818;
+  --textarea-background-color: #181818;
+}
+
+:root[data-theme="dark"]
+  .markdown-editor
+  .vditor-ir
+  :not(pre)
+  > code:not(.hljs):not(.highlight-chroma) {
+  border-radius: 4px;
+  color: #99f6e4;
+  background: #143d35;
+  padding: 0.16em 0.38em;
+}
+
+:root[data-theme="dark"]
+  .markdown-editor
+  .vditor-ir
+  .vditor-ir__node[data-type="code-block"] {
+  border: 1px solid #303334;
+  border-radius: 7px;
+  background: #202223;
+}
+
+:root[data-theme="dark"]
+  .markdown-editor
+  .vditor-ir
+  .vditor-ir__node[data-type="code-block"]
+  code {
+  background-color: transparent;
+  background-image: none;
+}
+
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs {
+  color: #d6d3d1;
+}
+
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-keyword,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-doctag,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-type,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-template-tag,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-template-variable,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-variable.language_ {
+  color: #ff7b72;
+}
+
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-title,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-title.class_,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-title.function_,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-number,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-literal,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-operator {
+  color: #79c0ff;
+}
+
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-string,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-regexp,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-meta .hljs-string {
+  color: #a5d6ff;
+}
+
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-built_in,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-symbol,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-attr,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-variable {
+  color: #ffa657;
+}
+
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-name,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-selector-tag,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-selector-id,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-quote {
+  color: #7ee787;
+}
+
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-comment,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-code,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-formula {
+  color: #8b949e;
+}
+
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-meta {
+  color: #79c0ff;
+}
+
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-subst,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-params,
+:root[data-theme="dark"] .markdown-editor .vditor-ir .hljs-function {
+  color: #d6d3d1;
+}
+
+:root[data-theme="dark"] .markdown-editor .vditor-ir blockquote {
+  border-left-color: #2bbf91;
+  border-radius: 0 6px 6px 0;
+  color: #d6d3d1;
+  background: #182722;
+  padding: 8px 14px;
+}
+
+:root[data-theme="dark"] .markdown-editor .vditor-ir h1,
+:root[data-theme="dark"] .markdown-editor .vditor-ir h2 {
+  border-bottom-color: #343434;
+}
+
+:root[data-theme="dark"] .markdown-editor .vditor-ir table tr {
+  border-color: #343738;
+  background: #202223;
+}
+
+:root[data-theme="dark"] .markdown-editor .vditor-ir table td,
+:root[data-theme="dark"] .markdown-editor .vditor-ir table th {
+  border-color: #3a3d3f;
+}
+
+:root[data-theme="dark"]
+  .markdown-editor
+  .vditor-ir
+  table
+  tbody
+  tr:nth-child(2n) {
+  background: #1d1f20;
+}
+
+:root[data-theme="dark"] .drop-overlay {
+  border-color: #2dd4bf;
+  color: #99f6e4;
+  background: rgb(15 23 42 / 92%);
+}
+
+:root[data-theme="dark"] button,
+:root[data-theme="dark"] .recent-select,
+:root[data-theme="dark"] .theme-select {
+  color: #d6d3d1;
+}
+
+:root[data-theme="dark"] button:hover {
+  background: #2b2b2b;
+}
+
+:root[data-theme="dark"] .menu-dropdown summary {
+  color: #d6d3d1;
+}
+
+:root[data-theme="dark"] .menu-dropdown summary:hover,
+:root[data-theme="dark"] .menu-dropdown[open] summary {
+  background: #2b2b2b;
+}
+
+:root[data-theme="dark"] .menu-popover {
+  border-color: #404040;
+  background: #242424;
+  box-shadow: 0 12px 35px rgb(0 0 0 / 35%);
+}
+
+:root[data-theme="dark"] .find-panel {
+  border-color: #404040;
+  background: #242424;
+  box-shadow: 0 14px 40px rgb(0 0 0 / 42%);
+}
+
+:root[data-theme="dark"] .find-row > input {
+  border-color: #525252;
+  color: #f5f5f4;
+  background: #1c1c1c;
+}
+
+:root[data-theme="dark"] .find-row > input:focus {
+  border-color: #2dd4bf;
+  box-shadow: 0 0 0 2px rgb(45 212 191 / 15%);
+}
+
+:root[data-theme="dark"] .find-count,
+:root[data-theme="dark"] .find-options,
+:root[data-theme="dark"] .find-replace-toggle,
+:root[data-theme="dark"] .edit-menu-popover kbd {
+  color: #a8a29e;
+}
+
+:root[data-theme="dark"] .replace-row button {
+  border-color: #525252;
+}
+
+:root[data-theme="dark"] .recovery-dialog {
+  border-color: #404040;
+  background: #242424;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 48%);
+}
+
+:root[data-theme="dark"] .recovery-badge {
+  color: #99f6e4;
+  background: #143d35;
+}
+
+:root[data-theme="dark"] .recovery-dialog h2 {
+  color: #f5f5f4;
+}
+
+:root[data-theme="dark"] .recovery-dialog p,
+:root[data-theme="dark"] .recovery-details dt {
+  color: #a8a29e;
+}
+
+:root[data-theme="dark"] .recovery-dialog strong,
+:root[data-theme="dark"] .recovery-details dd {
+  color: #d6d3d1;
+}
+
+:root[data-theme="dark"] .recovery-details {
+  background: #1c1c1c;
+}
+
+:root[data-theme="dark"] .recovery-actions button {
+  border-color: #525252;
+}
+
+:root[data-theme="dark"] .recovery-actions .primary {
+  border-color: #12856b;
+  color: #99f6e4;
+  background: #143d35;
+}
+
+:root[data-theme="dark"] .outline-title {
+  color: #d6d3d1;
+}
+
+:root[data-theme="dark"] .about-dialog {
+  border-color: #404040;
+  background: #242424;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 45%);
+}
+
+:root[data-theme="dark"] .about-dialog h2 {
+  color: #f5f5f4;
+}
+
+:root[data-theme="dark"] .about-version,
+:root[data-theme="dark"] .about-description,
+:root[data-theme="dark"] .about-meta {
+  color: #a8a29e;
+}
+
+:root[data-theme="dark"] .about-actions button {
+  border-color: #525252;
+}
+
+:root[data-theme="dark"] .about-actions .primary {
+  border-color: #12856b;
+  color: #99f6e4;
+  background: #143d35;
+}
+
+:root[data-theme="dark"] .association-dialog {
+  border-color: #404040;
+  background: #242424;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 45%);
+}
+
+:root[data-theme="dark"] .association-heading h2 {
+  color: #f5f5f4;
+}
+
+:root[data-theme="dark"] .association-heading p,
+:root[data-theme="dark"] .association-note {
+  color: #a8a29e;
+}
+
+:root[data-theme="dark"] .association-status {
+  color: #a8a29e;
+  background: #303030;
+}
+
+:root[data-theme="dark"] .association-status.is-current {
+  color: #99f6e4;
+  background: #143d35;
+}
+
+:root[data-theme="dark"] .association-status.needs-repair {
+  color: #f8d477;
+  background: #493b16;
+}
+
+:root[data-theme="dark"] .association-features {
+  color: #d6d3d1;
+  background: #1c1c1c;
+}
+
+:root[data-theme="dark"] .association-path-warning {
+  border-color: #665522;
+  color: #f8d477;
+  background: #332d1a;
+}
+
+:root[data-theme="dark"] .association-path-warning span {
+  color: #d7ba69;
+}
+
+:root[data-theme="dark"] .association-actions button {
+  border-color: #525252;
+}
+
+:root[data-theme="dark"] .association-actions .primary {
+  border-color: #12856b;
+  color: #99f6e4;
+  background: #143d35;
+}

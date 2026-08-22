@@ -1,36 +1,32 @@
 import Vditor from "vditor";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import packageInfo from "../package.json";
+import { AboutDialog } from "./components/AboutDialog";
+import { FindReplacePanel } from "./components/FindReplacePanel";
 import {
   MarkdownEditor,
   type MarkdownEditorHandle,
 } from "./components/MarkdownEditor";
 import { OutlinePanel } from "./components/OutlinePanel";
+import { RecoveryDialog } from "./components/RecoveryDialog";
+import { WindowsIntegrationDialog } from "./components/WindowsIntegrationDialog";
 import {
   desktop,
   type DesktopSettings,
-  type FileAssociationStatus,
   type NativeDocument,
   type RecoverySnapshot,
   type SavedImage,
   type ThemeMode,
 } from "./desktop/desktop";
+import { errorMessage, isDesktopUnavailable } from "./desktop/errors";
 import {
   createUntitledDocument,
   markDocumentSaved,
   updateDocumentContent,
   type DocumentState,
 } from "./document/documentModel";
-import {
-  findTextMatches,
-  replaceAllText,
-  replaceTextMatch,
-} from "./document/findReplace";
 import { addRecentFile, fileNameFromPath } from "./document/recentFiles";
 import { getMarkdownOutline } from "./markdown/outline";
 
-const repositoryUrl = "https://github.com/lxw112190/lw.MD";
-const latestReleaseUrl = `${repositoryUrl}/releases/latest`;
 const recoveryIntervalMs = 15_000;
 const recoveryDebounceMs = 1_500;
 
@@ -51,20 +47,11 @@ export default function App() {
   const [exportingPdf, setExportingPdf] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [associationOpen, setAssociationOpen] = useState(false);
-  const [associationInfo, setAssociationInfo] =
-    useState<FileAssociationStatus | null>(null);
-  const [associationBusy, setAssociationBusy] = useState(false);
-  const [findOpen, setFindOpen] = useState(false);
-  const [replaceVisible, setReplaceVisible] = useState(false);
-  const [findQuery, setFindQuery] = useState("");
-  const [replacement, setReplacement] = useState("");
-  const [matchCase, setMatchCase] = useState(false);
-  const [activeMatch, setActiveMatch] = useState(0);
+  const [findMode, setFindMode] = useState<"find" | "replace" | null>(null);
   const [pendingRecovery, setPendingRecovery] =
     useState<RecoverySnapshot | null>(null);
   const [recoveryReady, setRecoveryReady] = useState(false);
   const editor = useRef<MarkdownEditorHandle>(null);
-  const findInput = useRef<HTMLInputElement>(null);
   const printDocument = useRef<HTMLDivElement>(null);
   const documentRef = useRef(document);
   const lastRecoverySnapshot = useRef<{
@@ -76,13 +63,6 @@ export default function App() {
     () => getMarkdownOutline(document.content),
     [document.content],
   );
-  const findMatches = useMemo(
-    () => findTextMatches(document.content, findQuery, matchCase),
-    [document.content, findQuery, matchCase],
-  );
-  const currentMatchIndex = findMatches.length
-    ? Math.min(activeMatch, findMatches.length - 1)
-    : 0;
   const title = `${document.name}${document.dirty ? " *" : ""} — lw.MD`;
   const acceptDocument = useCallback(
     (result: NativeDocument, clearRecovery = true) => {
@@ -248,120 +228,6 @@ export default function App() {
     },
     [confirmDiscard],
   );
-  const openWebsite = useCallback(async (url: string, label: string) => {
-    try {
-      await desktop.app.openExternal(url);
-      setStatus(`已在浏览器打开${label}`);
-    } catch (error) {
-      setStatus(errorMessage(error));
-    }
-  }, []);
-  const showWindowsIntegration = useCallback(async () => {
-    setAssociationOpen(true);
-    setAssociationInfo(null);
-    try {
-      setAssociationInfo(await desktop.association.status());
-    } catch (error) {
-      setStatus(errorMessage(error));
-    }
-  }, []);
-  const updateWindowsIntegration = useCallback(
-    async (action: "register" | "unregister") => {
-      if (associationBusy) return;
-      setAssociationBusy(true);
-      try {
-        await desktop.association[action]();
-        setAssociationInfo(await desktop.association.status());
-        setStatus(
-          action === "register" ? "Windows 集成已注册" : "Windows 集成已取消",
-        );
-      } catch (error) {
-        setStatus(errorMessage(error));
-      } finally {
-        setAssociationBusy(false);
-      }
-    },
-    [associationBusy],
-  );
-  const openDefaultApps = useCallback(async () => {
-    try {
-      await desktop.association.openDefaultApps();
-      setStatus("已打开 Windows 默认应用设置");
-    } catch (error) {
-      setStatus(errorMessage(error));
-    }
-  }, []);
-  const showFind = useCallback((showReplace: boolean) => {
-    setFindOpen(true);
-    setReplaceVisible(showReplace);
-  }, []);
-  const revealMatch = useCallback(
-    (requestedIndex: number) => {
-      if (findMatches.length === 0) {
-        setActiveMatch(0);
-        setStatus(findQuery ? "未找到匹配内容" : "请输入要查找的内容");
-        return;
-      }
-      const nextIndex =
-        (requestedIndex + findMatches.length) % findMatches.length;
-      setActiveMatch(nextIndex);
-      const visible = editor.current?.revealText(
-        findQuery,
-        nextIndex,
-        matchCase,
-      );
-      setStatus(
-        visible
-          ? `第 ${nextIndex + 1} 项，共 ${findMatches.length} 项`
-          : `找到 ${findMatches.length} 项，当前结果不在可见文本中`,
-      );
-    },
-    [findMatches, findQuery, matchCase],
-  );
-  const replaceCurrent = useCallback(() => {
-    const match = findMatches[currentMatchIndex];
-    if (!match) {
-      setStatus(findQuery ? "未找到匹配内容" : "请输入要查找的内容");
-      return;
-    }
-    const nextContent = replaceTextMatch(document.content, match, replacement);
-    changeContent(nextContent);
-    const nextMatches = findTextMatches(nextContent, findQuery, matchCase);
-    const nextIndex = Math.min(
-      currentMatchIndex,
-      Math.max(0, nextMatches.length - 1),
-    );
-    setActiveMatch(nextIndex);
-    setStatus("已替换 1 处");
-    window.setTimeout(() => {
-      if (nextMatches.length > 0) {
-        editor.current?.revealText(findQuery, nextIndex, matchCase);
-      }
-    }, 50);
-  }, [
-    changeContent,
-    currentMatchIndex,
-    document.content,
-    findMatches,
-    findQuery,
-    matchCase,
-    replacement,
-  ]);
-  const replaceEveryMatch = useCallback(() => {
-    const result = replaceAllText(
-      document.content,
-      findQuery,
-      replacement,
-      matchCase,
-    );
-    if (result.count === 0) {
-      setStatus(findQuery ? "未找到匹配内容" : "请输入要查找的内容");
-      return;
-    }
-    changeContent(result.content);
-    setActiveMatch(0);
-    setStatus(`已替换 ${result.count} 处`);
-  }, [changeContent, document.content, findQuery, matchCase, replacement]);
   const persistRecoverySnapshot = useCallback(() => {
     const current = documentRef.current;
     if (!current.dirty) return;
@@ -533,21 +399,6 @@ export default function App() {
     void desktop.app.setDirty(document.dirty).catch(() => undefined);
   }, [document.dirty]);
   useEffect(() => {
-    if (!findOpen) return;
-    const timer = window.setTimeout(() => {
-      findInput.current?.focus();
-      findInput.current?.select();
-    });
-    return () => window.clearTimeout(timer);
-  }, [findOpen, replaceVisible]);
-  useEffect(() => {
-    if (!findOpen || !findQuery) return;
-    const timer = window.setTimeout(() => {
-      editor.current?.revealText(findQuery, 0, matchCase);
-    });
-    return () => window.clearTimeout(timer);
-  }, [findOpen, findQuery, matchCase]);
-  useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => {
       const next =
@@ -564,29 +415,13 @@ export default function App() {
     return () => media.removeEventListener("change", apply);
   }, [settings.theme]);
   useEffect(() => {
-    if (!aboutOpen && !associationOpen) return;
-    const closeWithEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      setAboutOpen(false);
-      setAssociationOpen(false);
-    };
-    window.addEventListener("keydown", closeWithEscape);
-    return () => window.removeEventListener("keydown", closeWithEscape);
-  }, [aboutOpen, associationOpen]);
-  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && findOpen) {
-        event.preventDefault();
-        setFindOpen(false);
-        editor.current?.focus();
-        return;
-      }
       if (!event.ctrlKey) return;
       const key = event.key.toLowerCase();
       if (key === "f" || key === "h") {
         event.preventDefault();
         event.stopPropagation();
-        showFind(key === "h");
+        setFindMode(key === "h" ? "replace" : "find");
         return;
       }
       if (key === "s") {
@@ -604,7 +439,7 @@ export default function App() {
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [createNew, findOpen, open, save, showFind]);
+  }, [createNew, open, save]);
   return (
     <main
       className={`app-shell${settings.outlineVisible ? " with-outline" : ""}`}
@@ -627,7 +462,7 @@ export default function App() {
               <button disabled={exportingPdf} onClick={() => void exportPdf()}>
                 {exportingPdf ? "正在导出…" : "导出 PDF"}
               </button>
-              <button onClick={() => void showWindowsIntegration()}>
+              <button onClick={() => setAssociationOpen(true)}>
                 Windows 集成…
               </button>
               {settings.recentFiles.length > 0 && (
@@ -659,11 +494,11 @@ export default function App() {
           >
             <summary>编辑</summary>
             <div className="menu-popover edit-menu-popover">
-              <button onClick={() => showFind(false)}>
+              <button onClick={() => setFindMode("find")}>
                 <span>查找</span>
                 <kbd>Ctrl+F</kbd>
               </button>
-              <button onClick={() => showFind(true)}>
+              <button onClick={() => setFindMode("replace")}>
                 <span>替换</span>
                 <kbd>Ctrl+H</kbd>
               </button>
@@ -716,92 +551,18 @@ export default function App() {
           </button>
         </div>
       </header>
-      {findOpen && (
-        <section className="find-panel" role="search" aria-label="查找和替换">
-          <div className="find-row">
-            <input
-              ref={findInput}
-              value={findQuery}
-              placeholder="查找"
-              aria-label="查找内容"
-              onChange={(event) => {
-                setFindQuery(event.target.value);
-                setActiveMatch(0);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  revealMatch(currentMatchIndex + (event.shiftKey ? -1 : 1));
-                }
-              }}
-            />
-            <span className="find-count" aria-live="polite">
-              {findMatches.length ? currentMatchIndex + 1 : 0}/
-              {findMatches.length}
-            </span>
-            <button
-              className="find-icon-button"
-              title="上一个（Shift+Enter）"
-              aria-label="上一个匹配项"
-              onClick={() => revealMatch(currentMatchIndex - 1)}
-            >
-              ↑
-            </button>
-            <button
-              className="find-icon-button"
-              title="下一个（Enter）"
-              aria-label="下一个匹配项"
-              onClick={() => revealMatch(currentMatchIndex + 1)}
-            >
-              ↓
-            </button>
-            <button
-              className="find-icon-button find-close"
-              title="关闭（Esc）"
-              aria-label="关闭查找"
-              onClick={() => {
-                setFindOpen(false);
-                editor.current?.focus();
-              }}
-            >
-              ×
-            </button>
-          </div>
-          {replaceVisible && (
-            <div className="find-row replace-row">
-              <input
-                value={replacement}
-                placeholder="替换为"
-                aria-label="替换内容"
-                onChange={(event) => setReplacement(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    replaceCurrent();
-                  }
-                }}
-              />
-              <button onClick={replaceCurrent}>替换</button>
-              <button onClick={replaceEveryMatch}>全部替换</button>
-            </div>
-          )}
-          <div className="find-options">
-            <button
-              className="find-replace-toggle"
-              onClick={() => setReplaceVisible((current) => !current)}
-            >
-              {replaceVisible ? "收起替换" : "展开替换"}
-            </button>
-            <label>
-              <input
-                type="checkbox"
-                checked={matchCase}
-                onChange={(event) => setMatchCase(event.target.checked)}
-              />
-              区分大小写
-            </label>
-          </div>
-        </section>
+      {findMode && (
+        <FindReplacePanel
+          content={document.content}
+          editor={editor}
+          replaceVisible={findMode === "replace"}
+          onChange={changeContent}
+          onClose={() => setFindMode(null)}
+          onReplaceVisibleChange={(visible) =>
+            setFindMode(visible ? "replace" : "find")
+          }
+          onStatus={setStatus}
+        />
       )}
       {settings.outlineVisible && (
         <OutlinePanel
@@ -828,194 +589,20 @@ export default function App() {
         <span>{status}</span>
       </footer>
       {pendingRecovery && (
-        <div className="recovery-backdrop">
-          <section
-            className="recovery-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="recovery-title"
-          >
-            <div className="recovery-badge" aria-hidden="true">
-              ↺
-            </div>
-            <div>
-              <h2 id="recovery-title">发现未保存的恢复快照</h2>
-              <p>
-                检测到上次意外中断前保存的内容。恢复后会作为未保存文档打开，
-                <strong>不会自动覆盖原文件</strong>。
-              </p>
-            </div>
-            <dl className="recovery-details">
-              <div>
-                <dt>文档</dt>
-                <dd>{pendingRecovery.name}</dd>
-              </div>
-              <div>
-                <dt>快照时间</dt>
-                <dd>{formatRecoveryTime(pendingRecovery.savedAt)}</dd>
-              </div>
-              {pendingRecovery.path && (
-                <div>
-                  <dt>原文件</dt>
-                  <dd title={pendingRecovery.path}>{pendingRecovery.path}</dd>
-                </div>
-              )}
-            </dl>
-            <div className="recovery-actions">
-              <button onClick={() => void discardRecovery()}>放弃快照</button>
-              <button
-                className="primary"
-                onClick={() => void restoreRecovery()}
-              >
-                恢复内容
-              </button>
-            </div>
-          </section>
-        </div>
+        <RecoveryDialog
+          snapshot={pendingRecovery}
+          onDiscard={discardRecovery}
+          onRestore={restoreRecovery}
+        />
       )}
       {aboutOpen && (
-        <div
-          className="about-backdrop"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setAboutOpen(false);
-          }}
-        >
-          <section
-            className="about-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="about-title"
-          >
-            <button
-              className="about-close"
-              aria-label="关闭关于窗口"
-              onClick={() => setAboutOpen(false)}
-            >
-              ×
-            </button>
-            <img src="/app-icon.png" alt="" className="about-icon" />
-            <h2 id="about-title">lw.MD（简墨）</h2>
-            <p className="about-version">版本 {packageInfo.version}</p>
-            <p className="about-description">
-              简洁轻量的 Windows 本地 Markdown 编辑器
-            </p>
-            <div className="about-actions">
-              <button
-                className="primary"
-                onClick={() => void openWebsite(repositoryUrl, " GitHub")}
-              >
-                GitHub 项目主页
-              </button>
-              <button
-                onClick={() =>
-                  void openWebsite(latestReleaseUrl, "最新版本页面")
-                }
-              >
-                查看最新版本
-              </button>
-            </div>
-            <p className="about-meta">
-              作者：天天代码码天天
-              <br />
-              MIT License · Copyright © 2026
-            </p>
-          </section>
-        </div>
+        <AboutDialog onClose={() => setAboutOpen(false)} onStatus={setStatus} />
       )}
       {associationOpen && (
-        <div
-          className="association-backdrop"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !associationBusy) {
-              setAssociationOpen(false);
-            }
-          }}
-        >
-          <section
-            className="association-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="association-title"
-          >
-            <div className="association-heading">
-              <div>
-                <h2 id="association-title">Windows 集成</h2>
-                <p>让 Markdown 文件更方便地使用 lw.MD 打开。</p>
-              </div>
-              <span
-                className={`association-status ${
-                  associationInfo?.current
-                    ? "is-current"
-                    : associationInfo?.registered
-                      ? "needs-repair"
-                      : "is-unregistered"
-                }`}
-              >
-                {!associationInfo
-                  ? "正在检查"
-                  : associationInfo.current
-                    ? "已注册"
-                    : associationInfo.registered
-                      ? "需要修复"
-                      : "未注册"}
-              </span>
-            </div>
-            <ul className="association-features">
-              <li>右键菜单显示“使用 lw.MD 打开”</li>
-              <li>在 Windows“打开方式”中显示 lw.MD</li>
-              <li>支持 .md 和 .markdown 文件</li>
-            </ul>
-            <p className="association-note">
-              注册不会修改当前默认应用。如需默认使用 lw.MD，请在 Windows
-              设置中自行选择。
-            </p>
-            {associationInfo?.registered && !associationInfo.current && (
-              <div className="association-path-warning">
-                <strong>检测到程序位置发生变化</strong>
-                <span title={associationInfo.registeredExecutablePath ?? ""}>
-                  {associationInfo.registeredExecutablePath ||
-                    "原注册路径不可用"}
-                </span>
-              </div>
-            )}
-            <div className="association-actions">
-              <button
-                disabled={!associationInfo?.current || associationBusy}
-                onClick={() => void openDefaultApps()}
-              >
-                默认应用设置…
-              </button>
-              <span />
-              {associationInfo?.registered && (
-                <button
-                  disabled={associationBusy}
-                  onClick={() => void updateWindowsIntegration("unregister")}
-                >
-                  取消注册
-                </button>
-              )}
-              {!associationInfo?.current && (
-                <button
-                  className="primary"
-                  disabled={!associationInfo || associationBusy}
-                  onClick={() => void updateWindowsIntegration("register")}
-                >
-                  {associationBusy
-                    ? "正在处理…"
-                    : associationInfo?.registered
-                      ? "修复关联"
-                      : "注册 Windows 集成"}
-                </button>
-              )}
-              <button
-                disabled={associationBusy}
-                onClick={() => setAssociationOpen(false)}
-              >
-                完成
-              </button>
-            </div>
-          </section>
-        </div>
+        <WindowsIntegrationDialog
+          onClose={() => setAssociationOpen(false)}
+          onStatus={setStatus}
+        />
       )}
       <article
         ref={printDocument}
@@ -1064,24 +651,4 @@ async function fileBase64(file: File) {
     );
     reader.readAsDataURL(file);
   });
-}
-
-function errorMessage(error: unknown) {
-  return typeof error === "object" && error && "message" in error
-    ? String(error.message)
-    : "操作失败";
-}
-
-function isDesktopUnavailable(error: unknown) {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === "DESKTOP_UNAVAILABLE"
-  );
-}
-
-function formatRecoveryTime(value: number) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "未知" : date.toLocaleString("zh-CN");
 }

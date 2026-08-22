@@ -1,0 +1,163 @@
+.editor-area {
+  min-width: 0;
+  min-height: 0;
+  background: #f5f5f4;
+}
+
+.markdown-editor-shell {
+  position: relative;
+  height: 100%;
+}
+
+.markdown-editor {
+  height: 100%;
+}
+
+.drop-overlay {
+  position: absolute;
+  z-index: 20;
+  inset: 12px;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  border: 2px dashed #14b88a;
+  border-radius: 12px;
+  color: #0f766e;
+  background: rgb(240 253 250 / 92%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.drop-overlay strong {
+  font-size: 18px;
+}
+
+.drop-overlay span {
+  font-size: 13px;
+}
+
+.markdown-editor.vditor {
+  border: 0;
+  height: 100% !important;
+  background: #fff;
+}
+
+.markdown-editor .vditor-toolbar {
+  border: 0;
+  border-bottom: 1px solid #efeeec;
+  background: #fafaf9;
+  padding-left: max(16px, calc((100% - 820px) / 2));
+}
+
+.markdown-editor .vditor-content {
+  background: #fff;
+}
+
+.markdown-editor .vditor-ir {
+  /* Vditor calculates the horizontal padding of its editable surface on
+     resize. Adding another responsive inset here collapses the text column
+     when the window is maximized. */
+  padding: 30px 0;
+  background: #fff;
+}
+
+.markdown-editor .vditor-ir__node {
+  font:
+    16px/1.78 "Microsoft YaHei UI",
+    system-ui,
+    sans-serif;
+}
+
+.markdown-editor .vditor-reset {
+  font-family: "Microsoft YaHei UI", system-ui, sans-serif;
+}
+
+.print-document {
+  display: none;
+}
+
+@page {
+  size: A4 portrait;
+  margin: 15mm;
+}
+
+@media print {
+  :root,
+  body {
+    color: #202124 !important;
+    background: #fff !important;
+  }
+
+  body {
+    overflow: visible;
+  }
+
+  .app-shell > :not(.print-document) {
+    display: none !important;
+  }
+
+  .app-shell {
+    display: block;
+    height: auto;
+  }
+
+  .print-document {
+    display: block;
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    color: #202124;
+    background: #fff;
+    font:
+      11.5pt/1.72 "Microsoft YaHei UI",
+      "Microsoft YaHei",
+      sans-serif;
+    overflow-wrap: anywhere;
+  }
+
+  .print-document h1,
+  .print-document h2,
+  .print-document h3,
+  .print-document h4,
+  .print-document h5,
+  .print-document h6 {
+    break-after: avoid-page;
+    page-break-after: avoid;
+    color: #171717;
+  }
+
+  .print-document pre,
+  .print-document blockquote,
+  .print-document table,
+  .print-document img,
+  .print-document svg {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+
+  .print-document pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .print-document table {
+    width: 100%;
+  }
+
+  .print-document img,
+  .print-document svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .print-document a {
+    color: #1d4ed8;
+    text-decoration: underline;
+  }
+
+  .print-document .vditor-copy,
+  .print-document .vditor-tooltipped {
+    display: none !important;
+  }
+}

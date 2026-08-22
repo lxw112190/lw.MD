@@ -1,0 +1,44 @@
+/* Light mode uses restrained surface contrast. Brand green is reserved for
+   compact Markdown accents so the document remains calm and readable. */
+:root:not([data-theme="dark"]) .markdown-editor.vditor {
+  --heading-border-color: #e7e5e4;
+  --panel-background-color: #fff;
+  --textarea-background-color: #fff;
+}
+
+:root:not([data-theme="dark"])
+  .markdown-editor
+  .vditor-ir
+  :not(pre)
+  > code:not(.hljs):not(.highlight-chroma) {
+  border-radius: 4px;
+  color: #0f766e;
+  background: #f0fdfa;
+  padding: 0.16em 0.38em;
+}
+
+:root:not([data-theme="dark"])
+  .markdown-editor
+  .vditor-ir
+  .vditor-ir__node[data-type="code-block"] {
+  border: 1px solid #e5e7eb;
+  border-radius: 7px;
+  background: #f6f8fa;
+}
+
+:root:not([data-theme="dark"])
+  .markdown-editor
+  .vditor-ir
+  .vditor-ir__node[data-type="code-block"]
+  code {
+  background-color: transparent;
+  background-image: none;
+}
+
+:root:not([data-theme="dark"]) .markdown-editor .vditor-ir blockquote {
+  border-left-color: #14a780;
+  border-radius: 0 6px 6px 0;
+  color: #57534e;
+  background: #f6fdf9;
+  padding: 8px 14px;
+}
