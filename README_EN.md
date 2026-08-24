@@ -23,6 +23,7 @@
 - Periodic recovery snapshots for restoring unsaved work after an unexpected exit
 - A4 PDF export
 - Persistent window position, size, and maximized state
+- Windows high-DPI and mixed-scaling multi-monitor support
 - Windows context-menu, Open With, and default-app settings integration
 - Fully offline frontend assets; end users do not need Node.js
 - WebView2 bridge origin checks, navigation restrictions, and parameter validation
@@ -124,11 +125,11 @@ Every push runs frontend checks, the Release build, and native tests. A download
 Pushing a `v*` tag that matches the project version automatically creates a GitHub Release and uploads the portable ZIP and SHA-256 checksum:
 
 ```powershell
-git tag -a v0.3.3 -m "lw.MD v0.3.3"
-git push origin v0.3.3
+git tag -a v0.3.4 -m "lw.MD v0.3.4"
+git push origin v0.3.4
 ```
 
-Tags with suffixes such as `v0.3.3-beta.1` or `v0.3.3-rc.1` are automatically published as GitHub pre-releases.
+Tags with suffixes such as `v0.3.4-beta.1` or `v0.3.4-rc.1` are automatically published as GitHub pre-releases.
 
 To debug WebView2 locally, set `LWMD_ENABLE_DEVTOOLS=1` before launching the application. Developer tools are disabled by default in production builds.
 

@@ -1,7 +1,7 @@
 {
   "name": "lw-md",
   "private": true,
-  "version": "0.3.3",
+  "version": "0.3.4",
   "scripts": {
     "dev": "npm --prefix app run dev",
     "build": "npm --prefix app run build",

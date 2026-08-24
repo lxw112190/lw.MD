@@ -23,6 +23,7 @@
 - 定时恢复快照，异常退出后可恢复未保存内容
 - A4 PDF 导出
 - 窗口位置、尺寸和最大化状态记忆
+- Windows 高 DPI 与混合缩放多显示器适配
 - Windows 右键菜单、打开方式和默认应用设置集成
 - 前端资源完全离线，最终用户无需安装 Node.js
 - WebView2 原生桥接来源校验、导航限制和参数校验
@@ -124,11 +125,11 @@ build\Release\lw.MD.exe
 推送与项目版本一致的 `v*` 标签后，CI 会自动创建 GitHub Release，并上传便携 ZIP 和 SHA-256 校验文件：
 
 ```powershell
-git tag -a v0.3.3 -m "lw.MD v0.3.3"
-git push origin v0.3.3
+git tag -a v0.3.4 -m "lw.MD v0.3.4"
+git push origin v0.3.4
 ```
 
-使用 `v0.3.3-beta.1`、`v0.3.3-rc.1` 等带后缀的标签时，会自动发布为 GitHub Pre-release。
+使用 `v0.3.4-beta.1`、`v0.3.4-rc.1` 等带后缀的标签时，会自动发布为 GitHub Pre-release。
 
 如需本地调试 WebView2，可在启动前设置 `LWMD_ENABLE_DEVTOOLS=1`；正式构建默认禁用开发者工具。
 
