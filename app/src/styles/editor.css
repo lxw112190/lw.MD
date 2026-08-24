@@ -61,15 +61,34 @@
   background: #fff;
 }
 
-.markdown-editor .vditor-ir__node {
-  font:
-    16px/1.78 "Microsoft YaHei UI",
-    system-ui,
-    sans-serif;
-}
-
 .markdown-editor .vditor-reset {
   font-family: "Microsoft YaHei UI", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.78;
+}
+
+.markdown-editor .vditor-ir h1 {
+  font-size: 1.75em;
+}
+
+.markdown-editor .vditor-ir h2 {
+  font-size: 1.55em;
+}
+
+.markdown-editor .vditor-ir h3 {
+  font-size: 1.38em;
+}
+
+.markdown-editor .vditor-ir h4 {
+  font-size: 1.25em;
+}
+
+.markdown-editor .vditor-ir h5 {
+  font-size: 1.13em;
+}
+
+.markdown-editor .vditor-ir h6 {
+  font-size: 1em;
 }
 
 .print-document {
