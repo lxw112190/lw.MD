@@ -1,13 +1,16 @@
 #include "app/command_line.h"
 #include "associations/file_association.h"
 #include "common/dpi.h"
+#include "common/dpi_window.h"
 #include "filesystem/file_service.h"
 #include "images/image_service.h"
 #include "recovery/recovery_service.h"
+#include "settings/settings.h"
 
 #include <Windows.h>
 #include <filesystem>
 #include <iostream>
+#include <nlohmann/json.hpp>
 #include <string>
 
 namespace {
@@ -51,11 +54,61 @@ int TestFileAssociationsInIsolatedRegistry() {
   RegDeleteKeyW(HKEY_CURRENT_USER, L"Software\\lw.MD");
   return result;
 }
+
+int TestWindowStateRoundTrip() {
+  const SavedWindowState saved{120, 80, 1770, 1140, false, 144};
+  const auto persisted = SaveWindowState(nlohmann::json::object(), saved);
+  const auto loaded = LoadWindowState(persisted);
+  if (!loaded) return 22;
+  if (loaded->width != saved.width || loaded->height != saved.height) return 23;
+  if (loaded->dpi != saved.dpi) return 24;
+  return 0;
+}
+
+int TestInvalidWindowDpiFallsBackToDefault() {
+  const SavedWindowState invalid{120, 80, 1770, 1140, false, 0};
+  const auto persisted = SaveWindowState(nlohmann::json::object(), invalid);
+  const auto loaded = LoadWindowState(persisted);
+  if (!loaded) return 25;
+  if (loaded->dpi != kDefaultDpi) return 26;
+  return 0;
+}
+
+int TestDpiSuggestedRectIsApplied() {
+  const auto window = CreateWindowExW(
+      0, L"STATIC", L"lw.MD DPI test", WS_OVERLAPPEDWINDOW, 0, 0, 320, 240,
+      nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
+  if (!window) return 27;
+
+  ShowWindow(window, SW_MAXIMIZE);
+  UpdateWindow(window);
+  const RECT suggested{100, 120, 940, 760};
+  const auto applied = ApplyDpiSuggestedRect(window, &suggested);
+  RECT actual{};
+  const auto read = GetWindowRect(window, &actual);
+  DestroyWindow(window);
+
+  if (!applied || !read) return 28;
+  if (actual.left != suggested.left || actual.top != suggested.top ||
+      actual.right != suggested.right || actual.bottom != suggested.bottom) {
+    return 29;
+  }
+  return 0;
+}
 }  // namespace
 
 int main() {
   if (ScaleDpiValue(1180, 96, 144) != 1770) return 20;
   if (ScaleDpiValue(1770, 144, 96) != 1180) return 21;
+  if (const auto window_state_result = TestWindowStateRoundTrip()) {
+    return window_state_result;
+  }
+  if (const auto invalid_dpi_result = TestInvalidWindowDpiFallsBackToDefault()) {
+    return invalid_dpi_result;
+  }
+  if (const auto dpi_rect_result = TestDpiSuggestedRectIsApplied()) {
+    return dpi_rect_result;
+  }
 
   wchar_t temporary_root[MAX_PATH]{};
   if (!GetTempPathW(MAX_PATH, temporary_root)) return 1;

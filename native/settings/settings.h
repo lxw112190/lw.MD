@@ -15,5 +15,8 @@ struct SavedWindowState {
 
 nlohmann::json LoadSettings();
 void SaveSettings(const nlohmann::json& value);
+std::optional<SavedWindowState> LoadWindowState(const nlohmann::json& settings);
 std::optional<SavedWindowState> LoadWindowState();
+nlohmann::json SaveWindowState(nlohmann::json settings,
+                               const SavedWindowState& state);
 void SaveWindowState(const SavedWindowState& state);

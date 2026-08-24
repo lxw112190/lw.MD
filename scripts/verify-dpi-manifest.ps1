@@ -12,13 +12,14 @@ $ErrorActionPreference = "Stop"
 $manifestFile = (Resolve-Path -LiteralPath $ManifestPath).Path
 $manifest = Get-Content -LiteralPath $manifestFile -Raw
 $dpiAwarenessPattern = '<dpiAwareness[^>]*>\s*PerMonitorV2\s*,\s*PerMonitor\s*</dpiAwareness>'
+$legacyDpiAwarePattern = '<dpiAware[^>]*>\s*true/pm\s*</dpiAware>'
 
 if ($manifest -notmatch $dpiAwarenessPattern) {
   throw "The manifest must declare PerMonitorV2 with a PerMonitor fallback."
 }
 
-if ($manifest -notmatch '<dpiAware[^>]*>\s*true\s*</dpiAware>') {
-  throw "The manifest must include the legacy DPI-aware fallback."
+if ($manifest -notmatch $legacyDpiAwarePattern) {
+  throw "The manifest must include the legacy Per-Monitor DPI-aware fallback."
 }
 
 if ($ExecutablePath) {
@@ -55,6 +56,9 @@ if ($ExecutablePath) {
     $embeddedManifest = Get-Content -LiteralPath $temporaryManifest -Raw
     if ($embeddedManifest -notmatch $dpiAwarenessPattern) {
       throw "The executable does not contain the PerMonitorV2 DPI declaration with fallback."
+    }
+    if ($embeddedManifest -notmatch $legacyDpiAwarePattern) {
+      throw "The executable does not contain the legacy Per-Monitor DPI-aware fallback."
     }
   }
   finally {

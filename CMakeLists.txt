@@ -88,10 +88,11 @@ include(CTest)
 if(BUILD_TESTING)
   add_executable(lw_md_native_tests tests/native_tests.cpp native/filesystem/file_service.cpp
     native/images/image_service.cpp native/recovery/recovery_service.cpp
-    native/app/command_line.cpp native/associations/file_association.cpp)
+    native/app/command_line.cpp native/associations/file_association.cpp
+    native/settings/settings.cpp)
   target_include_directories(lw_md_native_tests PRIVATE native)
   target_compile_definitions(lw_md_native_tests PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
   target_compile_options(lw_md_native_tests PRIVATE /W4 /permissive- /utf-8 /EHsc)
-  target_link_libraries(lw_md_native_tests PRIVATE nlohmann_json::nlohmann_json crypt32 shell32 ole32 advapi32)
+  target_link_libraries(lw_md_native_tests PRIVATE nlohmann_json::nlohmann_json crypt32 shell32 ole32 advapi32 user32)
   add_test(NAME lw_md_native_tests COMMAND lw_md_native_tests)
 endif()

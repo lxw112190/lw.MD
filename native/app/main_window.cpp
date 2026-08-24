@@ -2,6 +2,7 @@
 #include "bridge/bridge_dispatcher.h"
 #include "common/app_state.h"
 #include "common/dpi.h"
+#include "common/dpi_window.h"
 #include "common/utf8.h"
 #include "filesystem/file_service.h"
 #include "images/image_service.h"
@@ -143,12 +144,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
       return 0;
     case WM_DPICHANGED: {
       const auto* suggested = reinterpret_cast<const RECT*>(lparam);
-      if (state && !state->maximized && suggested) {
-        SetWindowPos(window, nullptr, suggested->left, suggested->top,
-                     suggested->right - suggested->left,
-                     suggested->bottom - suggested->top,
-                     SWP_NOZORDER | SWP_NOACTIVATE);
-      }
+      ApplyDpiSuggestedRect(window, suggested);
       if (state) state->webview->Resize();
       return 0;
     }
