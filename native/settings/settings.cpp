@@ -10,6 +10,8 @@
 using json = nlohmann::json;
 
 namespace {
+constexpr int kMaximumPersistedDpi = 480;
+
 std::filesystem::path SettingsPath() {
   PWSTR local_app_data = nullptr;
   if (FAILED(SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_CREATE, nullptr,
@@ -49,11 +51,20 @@ json Normalize(const json& input) {
     const auto width = window.value("width", 0);
     const auto height = window.value("height", 0);
     if (width >= 640 && width <= 16384 && height >= 480 && height <= 16384) {
+      auto dpi = kDefaultDpi;
+      const auto dpi_value = window.find("dpi");
+      if (dpi_value != window.end() && dpi_value->is_number_integer()) {
+        const auto candidate = dpi_value->get<int>();
+        if (candidate >= kDefaultDpi && candidate <= kMaximumPersistedDpi) {
+          dpi = candidate;
+        }
+      }
       result["window"] = {{"left", window.value("left", 0)},
                           {"top", window.value("top", 0)},
                           {"width", width},
                           {"height", height},
-                          {"maximized", window.value("maximized", false)}};
+                          {"maximized", window.value("maximized", false)},
+                          {"dpi", dpi}};
     }
   }
   return result;
@@ -79,23 +90,32 @@ void SaveSettings(const json& value) {
   WriteUtf8FileAtomically(SettingsPath().wstring(), normalized.dump(2));
 }
 
-std::optional<SavedWindowState> LoadWindowState() {
-  const auto settings = LoadSettings();
+std::optional<SavedWindowState> LoadWindowState(const json& settings) {
   if (!settings.contains("window")) return std::nullopt;
   const auto& window = settings["window"];
   return SavedWindowState{window.value("left", 0),
                           window.value("top", 0),
                           window.value("width", 1180),
                           window.value("height", 760),
-                          window.value("maximized", false)};
+                          window.value("maximized", false),
+                          window.value("dpi", kDefaultDpi)};
 }
 
-void SaveWindowState(const SavedWindowState& state) {
-  auto settings = LoadSettings();
+std::optional<SavedWindowState> LoadWindowState() {
+  return LoadWindowState(LoadSettings());
+}
+
+json SaveWindowState(json settings, const SavedWindowState& state) {
   settings["window"] = {{"left", state.left},
                         {"top", state.top},
                         {"width", state.width},
                         {"height", state.height},
-                        {"maximized", state.maximized}};
-  WriteUtf8FileAtomically(SettingsPath().wstring(), Normalize(settings).dump(2));
+                        {"maximized", state.maximized},
+                        {"dpi", state.dpi}};
+  return Normalize(settings);
+}
+
+void SaveWindowState(const SavedWindowState& state) {
+  const auto settings = SaveWindowState(LoadSettings(), state);
+  WriteUtf8FileAtomically(SettingsPath().wstring(), settings.dump(2));
 }

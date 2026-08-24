@@ -1,6 +1,8 @@
 #include "app/main_window.h"
 #include "bridge/bridge_dispatcher.h"
 #include "common/app_state.h"
+#include "common/dpi.h"
+#include "common/dpi_window.h"
 #include "common/utf8.h"
 #include "filesystem/file_service.h"
 #include "images/image_service.h"
@@ -17,6 +19,8 @@
 #include <vector>
 namespace {
 constexpr wchar_t kClassName[] = L"lw.MD.MainWindow";
+constexpr int kDefaultWindowWidth = 1180;
+constexpr int kDefaultWindowHeight = 760;
 struct State {
   std::unique_ptr<WebViewHost> webview;
   std::unique_ptr<BridgeDispatcher> bridge;
@@ -92,8 +96,10 @@ void PersistWindowState(HWND window, bool maximized) {
   WINDOWPLACEMENT placement{sizeof(placement)};
   if (!GetWindowPlacement(window, &placement)) return;
   const auto& bounds = placement.rcNormalPosition;
+  const auto dpi = GetDpiForWindow(window);
   SaveWindowState({bounds.left, bounds.top, bounds.right - bounds.left,
-                   bounds.bottom - bounds.top, maximized});
+                   bounds.bottom - bounds.top, maximized,
+                   dpi == 0 ? kDefaultDpi : static_cast<int>(dpi)});
 }
 LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lparam) {
   auto* state = reinterpret_cast<State*>(GetWindowLongPtrW(window, GWLP_USERDATA));
@@ -136,6 +142,12 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
         state->webview->Resize();
       }
       return 0;
+    case WM_DPICHANGED: {
+      const auto* suggested = reinterpret_cast<const RECT*>(lparam);
+      ApplyDpiSuggestedRect(window, suggested);
+      if (state) state->webview->Resize();
+      return 0;
+    }
     case WM_DROPFILES:
       if (state) {
         const auto drop = reinterpret_cast<HDROP>(wparam);
@@ -185,15 +197,35 @@ int RunMainWindow(HINSTANCE instance,
   std::optional<SavedWindowState> restored;
   try { restored = LoadWindowState(); }
   catch (...) {}
-  if (restored) *restored = FitWindowToVisibleMonitor(*restored);
   const auto window = CreateWindowExW(
       0, kClassName, L"lw.MD — 简墨", WS_OVERLAPPEDWINDOW,
       restored ? restored->left : CW_USEDEFAULT,
       restored ? restored->top : CW_USEDEFAULT,
-      restored ? restored->width : 1180, restored ? restored->height : 760,
+      restored ? restored->width : kDefaultWindowWidth,
+      restored ? restored->height : kDefaultWindowHeight,
       nullptr, nullptr, instance,
       const_cast<std::optional<std::wstring>*>(&launch_path));
   if (!window) return 1;
+  const auto window_dpi = GetDpiForWindow(window);
+  if (window_dpi != 0) {
+    const auto source_dpi = restored ? restored->dpi : kDefaultDpi;
+    const auto width = ScaleDpiValue(
+        restored ? restored->width : kDefaultWindowWidth, source_dpi, window_dpi);
+    const auto height = ScaleDpiValue(
+        restored ? restored->height : kDefaultWindowHeight, source_dpi, window_dpi);
+    if (restored) {
+      auto scaled = *restored;
+      scaled.width = width;
+      scaled.height = height;
+      scaled.dpi = static_cast<int>(window_dpi);
+      scaled = FitWindowToVisibleMonitor(scaled);
+      SetWindowPos(window, nullptr, scaled.left, scaled.top, scaled.width, scaled.height,
+                   SWP_NOZORDER | SWP_NOACTIVATE);
+    } else {
+      SetWindowPos(window, nullptr, 0, 0, width, height,
+                   SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+  }
   DragAcceptFiles(window, TRUE);
   ShowWindow(window, restored && restored->maximized ? SW_SHOWMAXIMIZED : SW_SHOW);
   UpdateWindow(window);

@@ -87,6 +87,13 @@ jobs:
       - name: Run native tests
         run: ctest --test-dir build -C Release --output-on-failure
 
+      - name: Verify embedded DPI manifest
+        shell: pwsh
+        run: |
+          ./scripts/verify-dpi-manifest.ps1 `
+            -ManifestPath "resources/lw-md.manifest" `
+            -ExecutablePath "build/Release/lw.MD.exe"
+
       - name: Create portable package
         shell: pwsh
         run: |
