@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+set(LWMD_MANIFEST "${CMAKE_CURRENT_SOURCE_DIR}/resources/lw-md.manifest")
 
 include(FetchContent)
 FetchContent_Declare(nlohmann_json URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz URL_HASH SHA256=42f6e95cad6ec532fd372391373363b62a14af6d771056dbfc86160e6dfff7aa)
@@ -76,7 +77,12 @@ target_include_directories(lw_md SYSTEM PRIVATE ${miniz_SOURCE_DIR})
 target_link_libraries(lw_md PRIVATE nlohmann_json::nlohmann_json miniz "${WEBVIEW2_LOADER}" ole32 shell32 comdlg32 shlwapi user32 gdi32 crypt32 advapi32)
 target_compile_definitions(lw_md PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE _WIN32_WINNT=0x0A00)
 target_compile_options(lw_md PRIVATE /W4 /permissive- /utf-8 /EHsc)
-set_target_properties(lw_md PROPERTIES OUTPUT_NAME "lw.MD")
+target_link_options(lw_md PRIVATE
+  "/MANIFEST:EMBED"
+  "/MANIFESTINPUT:${LWMD_MANIFEST}")
+set_target_properties(lw_md PROPERTIES
+  OUTPUT_NAME "lw.MD"
+  LINK_DEPENDS "${LWMD_MANIFEST}")
 
 include(CTest)
 if(BUILD_TESTING)

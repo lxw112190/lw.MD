@@ -136,6 +136,17 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
         state->webview->Resize();
       }
       return 0;
+    case WM_DPICHANGED: {
+      const auto* suggested = reinterpret_cast<const RECT*>(lparam);
+      if (state && !state->maximized && suggested) {
+        SetWindowPos(window, nullptr, suggested->left, suggested->top,
+                     suggested->right - suggested->left,
+                     suggested->bottom - suggested->top,
+                     SWP_NOZORDER | SWP_NOACTIVATE);
+      }
+      if (state) state->webview->Resize();
+      return 0;
+    }
     case WM_DROPFILES:
       if (state) {
         const auto drop = reinterpret_cast<HDROP>(wparam);
