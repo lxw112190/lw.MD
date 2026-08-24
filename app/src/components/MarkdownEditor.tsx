@@ -7,6 +7,10 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  normalizeDocumentImage,
+  normalizeDocumentImages,
+} from "../markdown/documentImages";
 
 export interface MarkdownEditorHandle {
   focus(): void;
@@ -41,6 +45,26 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     themeRef.current = theme;
     useEffect(() => {
       if (!container.current) return;
+      const editorContainer = container.current;
+      const imageObserver = new MutationObserver((records) => {
+        records.forEach((record) => {
+          if (
+            record.type === "attributes" &&
+            record.target instanceof HTMLImageElement
+          ) {
+            normalizeDocumentImage(record.target);
+          }
+          record.addedNodes.forEach((node) => {
+            if (node instanceof HTMLElement) normalizeDocumentImages(node);
+          });
+        });
+      });
+      imageObserver.observe(editorContainer, {
+        attributeFilter: ["src"],
+        attributes: true,
+        childList: true,
+        subtree: true,
+      });
       const instance = new Vditor(container.current, {
         mode: "ir",
         cache: { enable: false },
@@ -84,6 +108,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
             if (current.getValue() !== latestValue) {
               current.setValue(latestValue, true);
             }
+            normalizeDocumentImages(editorContainer);
             readyRef.current = true;
             const currentTheme = themeRef.current;
             current.setTheme(
@@ -100,6 +125,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
       });
       editor.current = instance;
       return () => {
+        imageObserver.disconnect();
         if (readyRef.current && instance.vditor?.element) instance.destroy();
         readyRef.current = false;
         editor.current = null;
@@ -108,7 +134,10 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     useEffect(() => {
       if (value === valueRef.current) return;
       valueRef.current = value;
-      if (readyRef.current) editor.current?.setValue(value, true);
+      if (readyRef.current) {
+        editor.current?.setValue(value, true);
+        if (container.current) normalizeDocumentImages(container.current);
+      }
     }, [value]);
 
     useEffect(() => {

@@ -26,6 +26,7 @@ import {
 } from "./document/documentModel";
 import { addRecentFile, fileNameFromPath } from "./document/recentFiles";
 import { getMarkdownOutline } from "./markdown/outline";
+import { waitForPrintAssets } from "./pdf/printAssets";
 
 const recoveryIntervalMs = 15_000;
 const recoveryDebounceMs = 1_500;
@@ -166,6 +167,7 @@ export default function App() {
         lang: "zh_CN",
         mode: "light",
         markdown: { linkBase: "https://document.lwmd/" },
+        render: { media: { enable: false } },
       });
       await waitForPrintAssets(target);
       const result = await desktop.pdf.export(pdfName(document.name));
@@ -616,25 +618,6 @@ export default function App() {
 function pdfName(documentName: string) {
   const base = documentName.replace(/\.(?:md|markdown)$/i, "").trim();
   return `${base || "未命名"}.pdf`;
-}
-
-async function waitForPrintAssets(target: HTMLElement) {
-  await Promise.all(
-    Array.from(target.querySelectorAll("img")).map(
-      (image) =>
-        image.complete ||
-        new Promise<void>((resolve) => {
-          const finish = () => resolve();
-          image.addEventListener("load", finish, { once: true });
-          image.addEventListener("error", finish, { once: true });
-          window.setTimeout(finish, 5000);
-        }),
-    ),
-  );
-  await window.document.fonts?.ready;
-  await new Promise<void>((resolve) =>
-    requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-  );
 }
 
 async function fileBase64(file: File) {
