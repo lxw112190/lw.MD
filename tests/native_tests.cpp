@@ -1,5 +1,6 @@
 #include "app/command_line.h"
 #include "associations/file_association.h"
+#include "common/dpi.h"
 #include "filesystem/file_service.h"
 #include "images/image_service.h"
 #include "recovery/recovery_service.h"
@@ -53,6 +54,9 @@ int TestFileAssociationsInIsolatedRegistry() {
 }  // namespace
 
 int main() {
+  if (ScaleDpiValue(1180, 96, 144) != 1770) return 20;
+  if (ScaleDpiValue(1770, 144, 96) != 1180) return 21;
+
   wchar_t temporary_root[MAX_PATH]{};
   if (!GetTempPathW(MAX_PATH, temporary_root)) return 1;
   const auto directory = std::filesystem::path(temporary_root) / L"lw-md-native-tests";

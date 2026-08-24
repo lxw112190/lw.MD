@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common/dpi.h"
 #include <nlohmann/json_fwd.hpp>
 #include <optional>
 
@@ -9,6 +10,7 @@ struct SavedWindowState {
   int width = 1180;
   int height = 760;
   bool maximized = false;
+  int dpi = kDefaultDpi;
 };
 
 nlohmann::json LoadSettings();

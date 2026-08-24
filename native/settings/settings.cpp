@@ -87,7 +87,8 @@ std::optional<SavedWindowState> LoadWindowState() {
                           window.value("top", 0),
                           window.value("width", 1180),
                           window.value("height", 760),
-                          window.value("maximized", false)};
+                          window.value("maximized", false),
+                          window.value("dpi", kDefaultDpi)};
 }
 
 void SaveWindowState(const SavedWindowState& state) {
@@ -96,6 +97,7 @@ void SaveWindowState(const SavedWindowState& state) {
                         {"top", state.top},
                         {"width", state.width},
                         {"height", state.height},
-                        {"maximized", state.maximized}};
+                         {"maximized", state.maximized},
+                         {"dpi", state.dpi}};
   WriteUtf8FileAtomically(SettingsPath().wstring(), Normalize(settings).dump(2));
 }
