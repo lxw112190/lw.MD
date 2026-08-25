@@ -3,6 +3,7 @@
 #include <ShlObj.h>
 #include <Shellapi.h>
 #include <Shlwapi.h>
+#include <Ole2.h>
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
@@ -112,6 +113,11 @@ std::wstring ImageContentType(const std::filesystem::path& path) {
 }
 }
 WebViewHost::~WebViewHost() {
+  if (drop_target_registered_ && window_) {
+    RevokeDragDrop(window_);
+    drop_target_registered_ = false;
+  }
+  drop_target_.Reset();
   if (webview_) {
     webview_->remove_WebMessageReceived(message_token_);
     webview_->remove_WebResourceRequested(resource_token_);
@@ -123,8 +129,14 @@ WebViewHost::~WebViewHost() {
   if (controller_) controller_->Close();
 }
 void WebViewHost::Create(HWND window, const std::wstring& content_folder,
-                         MessageHandler on_message) {
-  window_ = window; on_message_ = std::move(on_message); const auto user_data = UserDataFolder();
+                         MessageHandler on_message,
+                         FileDropHandler on_files_dropped,
+                         FileDragStateHandler on_file_drag_state) {
+  window_ = window;
+  on_message_ = std::move(on_message);
+  drop_target_ = CreateFileDropTarget(std::move(on_files_dropped),
+                                      std::move(on_file_drag_state));
+  const auto user_data = UserDataFolder();
   CreateCoreWebView2EnvironmentWithOptions(nullptr, user_data.c_str(), nullptr, Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>([this, content_folder](HRESULT result, ICoreWebView2Environment* environment) -> HRESULT {
     if (FAILED(result) || !environment) { MessageBoxW(window_, L"未找到 WebView2 Runtime。请安装 Microsoft Edge WebView2 Evergreen Runtime。", L"lw.MD", MB_OK | MB_ICONERROR); return result; }
     environment_ = environment;
@@ -133,7 +145,12 @@ void WebViewHost::Create(HWND window, const std::wstring& content_folder,
       if (FAILED(status) || !controller) return status;
       controller_ = controller; controller_->get_CoreWebView2(&webview_);
       Microsoft::WRL::ComPtr<ICoreWebView2Controller4> controller4;
-      if (SUCCEEDED(controller_.As(&controller4))) controller4->put_AllowExternalDrop(TRUE);
+      if (SUCCEEDED(controller_.As(&controller4)) &&
+          SUCCEEDED(controller4->put_AllowExternalDrop(FALSE)) &&
+          drop_target_ &&
+          SUCCEEDED(RegisterDragDrop(window_, drop_target_.Get()))) {
+        drop_target_registered_ = true;
+      }
       Microsoft::WRL::ComPtr<ICoreWebView2Settings> settings; if (SUCCEEDED(webview_->get_Settings(&settings))) { settings->put_AreDevToolsEnabled(DevToolsEnabled() ? TRUE : FALSE); settings->put_IsStatusBarEnabled(FALSE); settings->put_AreHostObjectsAllowed(FALSE); settings->put_IsWebMessageEnabled(TRUE); }
       Microsoft::WRL::ComPtr<ICoreWebView2_3> webview3; if (SUCCEEDED(webview_.As(&webview3))) webview3->SetVirtualHostNameToFolderMapping(L"app.lwmd", content_folder.c_str(), COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_DENY_CORS);
       webview_->add_NavigationStarting(

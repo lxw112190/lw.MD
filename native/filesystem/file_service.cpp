@@ -13,6 +13,42 @@ void WriteUtf8FileAtomically(const std::wstring& path, const std::string& conten
   const std::filesystem::path target(path);
   if (target.empty() || !target.has_parent_path()) throw std::runtime_error("Invalid file path");
   const auto temporary = target.parent_path() / (target.filename().wstring() + L".lw-md.tmp");
-  { std::ofstream output(temporary, std::ios::binary | std::ios::trunc); if (!output) throw std::runtime_error("Unable to create temporary file"); output.write(content.data(), static_cast<std::streamsize>(content.size())); output.flush(); if (!output) { std::filesystem::remove(temporary); throw std::runtime_error("Unable to write temporary file"); } }
-  if (!MoveFileExW(temporary.c_str(), target.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) { std::filesystem::remove(temporary); throw std::runtime_error("Unable to replace original file"); }
+  {
+    std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
+    if (!output) throw std::runtime_error("Unable to create temporary file");
+    output.write(content.data(), static_cast<std::streamsize>(content.size()));
+    output.flush();
+    if (!output) {
+      std::filesystem::remove(temporary);
+      throw std::runtime_error("Unable to write temporary file");
+    }
+  }
+
+  const auto original_attributes = GetFileAttributesW(target.c_str());
+  const bool target_exists = original_attributes != INVALID_FILE_ATTRIBUTES;
+  const DWORD blocking_attributes =
+      FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_HIDDEN;
+  const bool target_needs_unlock =
+      target_exists && (original_attributes & blocking_attributes) != 0;
+  if (target_needs_unlock &&
+      !SetFileAttributesW(target.c_str(),
+                          original_attributes & ~blocking_attributes)) {
+    std::filesystem::remove(temporary);
+    throw std::runtime_error("Unable to unlock the read-only original file");
+  }
+
+  if (!MoveFileExW(temporary.c_str(), target.c_str(),
+                   MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+    const auto error = GetLastError();
+    if (target_needs_unlock) {
+      SetFileAttributesW(target.c_str(), original_attributes);
+    }
+    std::filesystem::remove(temporary);
+    throw std::runtime_error("Unable to replace original file (Windows error " +
+                             std::to_string(error) + ")");
+  }
+
+  if (target_exists) {
+    SetFileAttributesW(target.c_str(), original_attributes);
+  }
 }

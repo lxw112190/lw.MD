@@ -2,16 +2,20 @@
 #include "associations/file_association.h"
 #include "common/dpi.h"
 #include "common/dpi_window.h"
+#include "dragdrop/file_drop_target.h"
 #include "filesystem/file_service.h"
 #include "images/image_service.h"
 #include "recovery/recovery_service.h"
 #include "settings/settings.h"
 
 #include <Windows.h>
+#include <ShlObj_core.h>
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <string>
+#include <vector>
 
 namespace {
 int TestFileAssociationsInIsolatedRegistry() {
@@ -95,6 +99,33 @@ int TestDpiSuggestedRectIsApplied() {
   }
   return 0;
 }
+
+int TestDroppedFilePathExtraction() {
+  const std::wstring markdown = L"C:\\文档\\首图.md";
+  const std::wstring image = L"C:\\文档\\resources\\封面.png";
+  std::wstring names;
+  names.append(markdown);
+  names.push_back(L'\0');
+  names.append(image);
+  names.push_back(L'\0');
+  names.push_back(L'\0');
+
+  std::vector<unsigned char> storage(sizeof(DROPFILES) +
+                                     names.size() * sizeof(wchar_t));
+  auto* header = reinterpret_cast<DROPFILES*>(storage.data());
+  *header = {};
+  header->pFiles = sizeof(DROPFILES);
+  header->fWide = TRUE;
+  std::memcpy(storage.data() + sizeof(DROPFILES), names.data(),
+              names.size() * sizeof(wchar_t));
+
+  const auto paths =
+      ExtractDroppedFilePaths(reinterpret_cast<HDROP>(storage.data()));
+  if (paths.size() != 2) return 30;
+  if (paths[0] != std::filesystem::path(markdown)) return 31;
+  if (paths[1] != std::filesystem::path(image)) return 32;
+  return 0;
+}
 }  // namespace
 
 int main() {
@@ -108,6 +139,9 @@ int main() {
   }
   if (const auto dpi_rect_result = TestDpiSuggestedRectIsApplied()) {
     return dpi_rect_result;
+  }
+  if (const auto drop_result = TestDroppedFilePathExtraction()) {
+    return drop_result;
   }
 
   wchar_t temporary_root[MAX_PATH]{};
@@ -138,6 +172,22 @@ int main() {
   WriteUtf8FileAtomically(file.wstring(), second);
   if (ReadUtf8File(file.wstring()) != second) return 3;
   if (std::filesystem::exists(file.wstring() + L".lw-md.tmp")) return 4;
+  const auto writable_attributes = GetFileAttributesW(file.c_str());
+  if (writable_attributes == INVALID_FILE_ATTRIBUTES ||
+      !SetFileAttributesW(file.c_str(),
+                          writable_attributes | FILE_ATTRIBUTE_READONLY)) {
+    return 33;
+  }
+  const std::string read_only_update = "# 简墨\n只读文件更新";
+  WriteUtf8FileAtomically(file.wstring(), read_only_update);
+  if (ReadUtf8File(file.wstring()) != read_only_update) return 34;
+  const auto preserved_attributes = GetFileAttributesW(file.c_str());
+  if (preserved_attributes == INVALID_FILE_ATTRIBUTES ||
+      (preserved_attributes & FILE_ATTRIBUTE_READONLY) == 0) {
+    return 35;
+  }
+  SetFileAttributesW(file.c_str(),
+                     preserved_attributes & ~FILE_ATTRIBUTE_READONLY);
   const auto image = SaveImageData(
       file.wstring(), "image/png",
       "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
@@ -152,7 +202,7 @@ int main() {
   SaveRecoverySnapshotTo(
       snapshot_path,
       RecoverySnapshot{file.wstring(), "中文-atomic.md", "未保存的恢复内容", 123456U});
-  if (ReadUtf8File(file.wstring()) != second) return 9;
+  if (ReadUtf8File(file.wstring()) != read_only_update) return 9;
   const auto snapshot = LoadRecoverySnapshotFrom(snapshot_path);
   if (!snapshot || snapshot->document_path != file.wstring() ||
       snapshot->name != "中文-atomic.md" ||

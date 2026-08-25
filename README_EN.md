@@ -69,9 +69,8 @@ When a document has unsaved changes, lw.MD creates a recovery snapshot about 1.5
 
 ## Drag and Drop
 
-- Drop onto the window title bar to open a Markdown file from its original disk path.
-- Drop into the editor workspace to load the file contents as an unsaved document. WebView2 cannot expose the original disk path in this case, so the first save requires a location.
-- After the document is saved, dropped or pasted images are copied into the adjacent `assets` directory and inserted with relative paths.
+- Drop Markdown anywhere in the window to open it from its original disk path and resolve relative images beside the document correctly.
+- After the document is saved, use the editor's image button or drop/paste images. They are copied into the adjacent `assets` directory and inserted with relative paths.
 
 ## Windows Integration
 
@@ -125,11 +124,11 @@ Every push runs frontend checks, the Release build, and native tests. A download
 Pushing a `v*` tag that matches the project version automatically creates a GitHub Release and uploads the portable ZIP and SHA-256 checksum:
 
 ```powershell
-git tag -a v0.3.4 -m "lw.MD v0.3.4"
-git push origin v0.3.4
+git tag -a v0.3.5 -m "lw.MD v0.3.5"
+git push origin v0.3.5
 ```
 
-Tags with suffixes such as `v0.3.4-beta.1` or `v0.3.4-rc.1` are automatically published as GitHub pre-releases.
+Tags with suffixes such as `v0.3.5-beta.1` or `v0.3.5-rc.1` are automatically published as GitHub pre-releases.
 
 To debug WebView2 locally, set `LWMD_ENABLE_DEVTOOLS=1` before launching the application. Developer tools are disabled by default in production builds.
 

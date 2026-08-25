@@ -49,6 +49,7 @@ export default function App() {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [associationOpen, setAssociationOpen] = useState(false);
   const [findMode, setFindMode] = useState<"find" | "replace" | null>(null);
+  const [dropActive, setDropActive] = useState(false);
   const [pendingRecovery, setPendingRecovery] =
     useState<RecoverySnapshot | null>(null);
   const [recoveryReady, setRecoveryReady] = useState(false);
@@ -207,29 +208,25 @@ export default function App() {
     },
     [document.path],
   );
-  const openDroppedMarkdown = useCallback(
-    async (file: File) => {
-      if (!confirmDiscard()) return;
-      try {
-        const content = await file.text();
-        await desktop.recovery.clear().catch(() => undefined);
-        lastRecoverySnapshot.current = null;
-        await desktop.file.clearCurrent().catch(() => undefined);
-        setDocument({
-          path: null,
-          name: file.name,
-          content,
-          savedContent: "",
-          dirty: true,
-          encoding: "utf-8",
-        });
-        setStatus("已载入拖入文件，首次保存时请选择位置");
-      } catch (error) {
-        setStatus(errorMessage(error));
-      }
-    },
-    [confirmDiscard],
-  );
+  const chooseImages = useCallback(async () => {
+    if (!document.path) {
+      const message = "请先保存当前 Markdown 文件，再插入本地图片。";
+      setStatus(message);
+      window.alert(message);
+      return [];
+    }
+    setStatus("正在选择图片…");
+    try {
+      const images = await desktop.image.choose(document.path);
+      setStatus(
+        images.length > 0 ? `已插入 ${images.length} 张图片` : "已取消插入图片",
+      );
+      return images.map((image) => image.relativePath);
+    } catch (error) {
+      setStatus(errorMessage(error));
+      return [];
+    }
+  }, [document.path]);
   const persistRecoverySnapshot = useCallback(() => {
     const current = documentRef.current;
     if (!current.dirty) return;
@@ -355,16 +352,33 @@ export default function App() {
     void desktop.app.setTitle(title).catch(() => undefined);
   }, [title]);
   useEffect(
-    () =>
-      desktop.file.onOpened((result) => {
-        acceptDocument(result);
-        setStatus("已打开拖入文件");
-      }),
-    [acceptDocument],
+    () => desktop.drop.onActive(({ active }) => setDropActive(active)),
+    [],
   );
   useEffect(
     () =>
-      desktop.image.onDropped(({ sourcePaths }) => {
+      desktop.drop.onFiles(({ files }) => {
+        setDropActive(false);
+        const markdown = files.find((file) => file.kind === "markdown");
+        if (markdown) {
+          if (!confirmDiscard()) {
+            setStatus("已取消打开拖入文件");
+            return;
+          }
+          setStatus("正在打开拖入文件…");
+          void desktop.drop
+            .openMarkdown(markdown.id)
+            .then((result) => {
+              acceptDocument(result);
+              setStatus("已打开拖入文件");
+            })
+            .catch((error) => setStatus(errorMessage(error)));
+          return;
+        }
+        const imageIds = files
+          .filter((file) => file.kind === "image")
+          .map((file) => file.id);
+        if (imageIds.length === 0) return;
         if (!document.path) {
           const message = "请先保存当前 Markdown 文件，再插入本地图片。";
           setStatus(message);
@@ -372,8 +386,8 @@ export default function App() {
           return;
         }
         setStatus("正在导入图片…");
-        void desktop.image
-          .import(document.path, sourcePaths)
+        void desktop.drop
+          .importImages(document.path, imageIds)
           .then((images) => {
             editor.current?.insertMarkdown(
               images
@@ -384,7 +398,7 @@ export default function App() {
           })
           .catch((error) => setStatus(errorMessage(error)));
       }),
-    [document.path],
+    [acceptDocument, confirmDiscard, document.path],
   );
   useEffect(() => {
     void desktop.app
@@ -579,8 +593,9 @@ export default function App() {
           ref={editor}
           value={document.content}
           onChange={changeContent}
+          onChooseImages={chooseImages}
           onInsertImages={savePastedImages}
-          onOpenMarkdown={openDroppedMarkdown}
+          dropActive={dropActive}
           theme={resolvedTheme}
         />
       </section>

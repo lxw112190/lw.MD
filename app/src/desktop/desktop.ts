@@ -17,8 +17,17 @@ export interface SavedImage {
   path: string;
   relativePath: string;
 }
-export interface DroppedImages {
-  sourcePaths: string[];
+export interface DroppedFileGrant {
+  id: string;
+  name: string;
+  kind: "markdown" | "image";
+  size: number;
+}
+export interface DroppedFiles {
+  files: DroppedFileGrant[];
+}
+export interface DropActiveState {
+  active: boolean;
 }
 export interface RecoverySnapshot {
   path: string | null;
@@ -59,8 +68,16 @@ export const desktop = {
       invoke<SaveResult>("file.save", { path, content }),
     saveAs: (content: string, suggestedName: string) =>
       invoke<SaveResult | null>("file.saveAs", { content, suggestedName }),
-    onOpened: (listener: (document: NativeDocument) => void) =>
-      subscribeDesktopEvent("file.opened", listener),
+  },
+  drop: {
+    openMarkdown: (id: string) =>
+      invoke<NativeDocument>("drop.openMarkdown", { id }),
+    importImages: (documentPath: string, ids: string[]) =>
+      invoke<SavedImage[]>("image.importDropped", { documentPath, ids }),
+    onActive: (listener: (state: DropActiveState) => void) =>
+      subscribeDesktopEvent("drop.active", listener),
+    onFiles: (listener: (files: DroppedFiles) => void) =>
+      subscribeDesktopEvent("drop.files", listener),
   },
   pdf: {
     export: (suggestedName: string) =>
@@ -73,10 +90,8 @@ export const desktop = {
         mimeType,
         base64,
       }),
-    import: (documentPath: string, sourcePaths: string[]) =>
-      invoke<SavedImage[]>("image.import", { documentPath, sourcePaths }),
-    onDropped: (listener: (images: DroppedImages) => void) =>
-      subscribeDesktopEvent("image.dropped", listener),
+    choose: (documentPath: string) =>
+      invoke<SavedImage[]>("image.choose", { documentPath }),
   },
   recovery: {
     get: () => invoke<RecoverySnapshot | null>("recovery.get"),

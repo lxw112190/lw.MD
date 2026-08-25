@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(lw_MD VERSION 0.3.4 LANGUAGES CXX)
+project(lw_MD VERSION 0.3.5 LANGUAGES CXX)
 
 if(NOT WIN32 OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
   message(FATAL_ERROR "lw.MD supports Windows x64 only")
@@ -67,6 +67,7 @@ set_source_files_properties("${LWMD_GENERATED_DIR}/frontend_bundle.rc"
 add_executable(lw_md WIN32
   native/app/main.cpp native/app/main_window.cpp native/app/command_line.cpp
   native/associations/file_association.cpp native/bridge/bridge_dispatcher.cpp
+  native/dragdrop/file_drop_target.cpp
   native/filesystem/file_service.cpp native/dialogs/file_dialog.cpp native/settings/settings.cpp
   native/images/image_service.cpp native/recovery/recovery_service.cpp
   native/resources/frontend_bundle.cpp native/webview/webview_host.cpp resources/lw-md.rc
@@ -89,7 +90,7 @@ if(BUILD_TESTING)
   add_executable(lw_md_native_tests tests/native_tests.cpp native/filesystem/file_service.cpp
     native/images/image_service.cpp native/recovery/recovery_service.cpp
     native/app/command_line.cpp native/associations/file_association.cpp
-    native/settings/settings.cpp)
+    native/dragdrop/file_drop_target.cpp native/settings/settings.cpp)
   target_include_directories(lw_md_native_tests PRIVATE native)
   target_compile_definitions(lw_md_native_tests PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
   target_compile_options(lw_md_native_tests PRIVATE /W4 /permissive- /utf-8 /EHsc)

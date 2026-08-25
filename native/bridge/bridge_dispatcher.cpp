@@ -10,6 +10,7 @@
 #include "settings/settings.h"
 
 #include <Shellapi.h>
+#include <Objbase.h>
 
 #include <algorithm>
 #include <filesystem>
@@ -32,6 +33,27 @@ constexpr std::size_t kMaxMarkdownBytes = 16U * 1024U * 1024U;
 constexpr std::size_t kMaxImageBase64Bytes = 48U * 1024U * 1024U;
 constexpr std::size_t kMaxPathBytes = 32767U * 4U;
 constexpr std::size_t kMaxImportedImages = 64U;
+constexpr std::uintmax_t kMaxDroppedImageBytes = 64U * 1024U * 1024U;
+
+std::string NewDropGrantId() {
+  GUID value{};
+  if (FAILED(CoCreateGuid(&value))) {
+    throw std::runtime_error("Cannot create dropped file grant");
+  }
+  wchar_t text[40]{};
+  if (StringFromGUID2(value, text, static_cast<int>(std::size(text))) <= 0) {
+    throw std::runtime_error("Cannot encode dropped file grant");
+  }
+  std::string result;
+  for (const auto character : std::wstring(text)) {
+    if ((character >= L'0' && character <= L'9') ||
+        (character >= L'a' && character <= L'f') ||
+        (character >= L'A' && character <= L'F')) {
+      result.push_back(static_cast<char>(character));
+    }
+  }
+  return result;
+}
 
 json Error(const std::string& id, const char* code, const char* message) {
   return {{"type", "response"},
@@ -209,7 +231,6 @@ void BridgeDispatcher::SetCurrentDocumentPath(const std::wstring& path) {
   }
   current_document_path_ =
       path.empty() ? L"" : fs::path(path).lexically_normal().wstring();
-  pending_image_paths_.clear();
   if (document_mapper_) document_mapper_(current_document_path_);
 }
 
@@ -218,22 +239,42 @@ void BridgeDispatcher::SetLaunchDocumentPath(const std::wstring& path) {
   launch_document_path_ = fs::path(path).lexically_normal().wstring();
 }
 
-void BridgeDispatcher::SetPendingImagePaths(
+std::vector<DroppedFileGrantInfo> BridgeDispatcher::GrantDroppedFiles(
     const std::vector<std::filesystem::path>& paths) {
   if (paths.empty() || paths.size() > kMaxImportedImages) {
     throw std::invalid_argument("Invalid dropped image count");
   }
-  pending_image_paths_.clear();
-  pending_image_paths_.reserve(paths.size());
+  dropped_file_grants_.clear();
+  std::vector<DroppedFileGrantInfo> result;
+  result.reserve(paths.size());
   for (const auto& path : paths) {
-    const auto value = path.lexically_normal().wstring();
-    if (value.size() > 32767U || !path.is_absolute() ||
-        !IsSupportedImagePath(value) || !fs::is_regular_file(path)) {
-      pending_image_paths_.clear();
-      throw std::invalid_argument("Invalid dropped image path");
+    std::error_code error;
+    const auto canonical = fs::canonical(path, error);
+    if (error || canonical.empty() || canonical.wstring().size() > 32767U ||
+        !canonical.is_absolute() || !fs::is_regular_file(canonical, error) ||
+        error) {
+      continue;
     }
-    pending_image_paths_.push_back(value);
+    const auto markdown = IsAbsoluteMarkdownPath(canonical.wstring());
+    const auto image = IsSupportedImagePath(canonical.wstring());
+    if (!markdown && !image) continue;
+    const auto size = fs::file_size(canonical, error);
+    if (error || (markdown && size > kMaxMarkdownBytes) ||
+        (image && size > kMaxDroppedImageBytes)) {
+      continue;
+    }
+    auto grant_id = NewDropGrantId();
+    while (dropped_file_grants_.find(grant_id) !=
+           dropped_file_grants_.end()) {
+      grant_id = NewDropGrantId();
+    }
+    const auto kind = markdown ? "markdown" : "image";
+    dropped_file_grants_.emplace(
+        grant_id, DroppedFileGrant{canonical.lexically_normal(), kind});
+    result.push_back({grant_id, WideToUtf8(canonical.filename().wstring()),
+                      kind, size});
   }
+  return result;
 }
 
 void BridgeDispatcher::Dispatch(const std::string& raw, Reply reply) {
@@ -437,6 +478,34 @@ void BridgeDispatcher::Dispatch(const std::string& raw, Reply reply) {
       reply(Success(id, nullptr).dump());
       return;
     }
+    if (method == "drop.openMarkdown") {
+      if (params.size() != 1U) {
+        reply(Error(id, "BRIDGE_INVALID_PARAMS",
+                    "Invalid dropped Markdown parameters")
+                  .dump());
+        return;
+      }
+      const auto grant_id = RequireString(params, "id", 64U);
+      const auto grant = dropped_file_grants_.find(grant_id);
+      if (grant == dropped_file_grants_.end() ||
+          grant->second.kind != "markdown") {
+        reply(Error(id, "DROP_GRANT_DENIED",
+                    "Dropped Markdown grant is not authorized")
+                  .dump());
+        return;
+      }
+      const auto path = grant->second.path.wstring();
+      ValidateReadableMarkdown(path);
+      const auto content = ReadUtf8File(path);
+      dropped_file_grants_.clear();
+      SetCurrentDocumentPath(path);
+      reply(Success(id,
+                    {{"path", WideToUtf8(path)},
+                     {"name", WideToUtf8(fs::path(path).filename().wstring())},
+                     {"content", content}})
+                .dump());
+      return;
+    }
     if (method == "file.getLaunch") {
       if (!params.empty()) {
         reply(Error(id, "BRIDGE_INVALID_PARAMS", "Invalid launch parameters")
@@ -551,40 +620,63 @@ void BridgeDispatcher::Dispatch(const std::string& raw, Reply reply) {
       reply(Success(id, ImageJson(image)).dump());
       return;
     }
-    if (method == "image.import") {
+    if (method == "image.choose") {
       const auto document_path =
           Utf8ToWide(RequireString(params, "documentPath", kMaxPathBytes));
-      if (!SamePath(document_path, current_document_path_) ||
-          !params.contains("sourcePaths") ||
-          !params.at("sourcePaths").is_array() ||
-          params.at("sourcePaths").empty() ||
-          params.at("sourcePaths").size() > kMaxImportedImages) {
-        reply(Error(id, "IMAGE_IMPORT_DENIED", "Image import is not authorized")
+      if (params.size() != 1U ||
+          !SamePath(document_path, current_document_path_)) {
+        reply(Error(id, "IMAGE_IMPORT_DENIED",
+                    "Image selection is not authorized")
+                  .dump());
+        return;
+      }
+      const auto selected = ChooseImageFiles(owner_);
+      if (!selected) {
+        reply(Success(id, json::array()).dump());
+        return;
+      }
+      const auto images = ImportImageFiles(document_path, *selected);
+      auto result = json::array();
+      for (const auto& image : images) result.push_back(ImageJson(image));
+      reply(Success(id, std::move(result)).dump());
+      return;
+    }
+    if (method == "image.importDropped") {
+      const auto document_path =
+          Utf8ToWide(RequireString(params, "documentPath", kMaxPathBytes));
+      if (params.size() != 2U ||
+          !SamePath(document_path, current_document_path_) ||
+          !params.contains("ids") || !params.at("ids").is_array() ||
+          params.at("ids").empty() ||
+          params.at("ids").size() > kMaxImportedImages) {
+        reply(Error(id, "IMAGE_IMPORT_DENIED",
+                    "Dropped image import is not authorized")
                   .dump());
         return;
       }
       std::vector<std::wstring> sources;
-      for (const auto& source : params.at("sourcePaths")) {
-        if (!source.is_string() ||
-            source.get_ref<const std::string&>().size() > kMaxPathBytes) {
-          throw std::invalid_argument("Invalid image source path");
-        }
-        const auto path = fs::path(Utf8ToWide(source.get<std::string>()))
-                              .lexically_normal()
-                              .wstring();
-        const bool authorized = std::any_of(
-            pending_image_paths_.begin(), pending_image_paths_.end(),
-            [&path](const auto& allowed) { return SamePath(path, allowed); });
-        if (!authorized || !IsSupportedImagePath(path) ||
-            !fs::is_regular_file(path)) {
-          reply(Error(id, "IMAGE_IMPORT_DENIED", "Image import is not authorized")
+      sources.reserve(params.at("ids").size());
+      for (const auto& item : params.at("ids")) {
+        if (!item.is_string() || item.get_ref<const std::string&>().empty() ||
+            item.get_ref<const std::string&>().size() > 64U) {
+          reply(Error(id, "IMAGE_IMPORT_DENIED",
+                      "Dropped image grant is invalid")
                     .dump());
           return;
         }
-        sources.push_back(path);
+        const auto grant =
+            dropped_file_grants_.find(item.get_ref<const std::string&>());
+        if (grant == dropped_file_grants_.end() ||
+            grant->second.kind != "image") {
+          reply(Error(id, "IMAGE_IMPORT_DENIED",
+                      "Dropped image grant is not authorized")
+                    .dump());
+          return;
+        }
+        sources.push_back(grant->second.path.wstring());
       }
-      pending_image_paths_.clear();
       const auto images = ImportImageFiles(document_path, sources);
+      dropped_file_grants_.clear();
       auto result = json::array();
       for (const auto& image : images) result.push_back(ImageJson(image));
       reply(Success(id, std::move(result)).dump());

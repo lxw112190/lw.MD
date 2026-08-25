@@ -16,20 +16,24 @@ describe("desktop bridge response", () => {
     expect(decodeBridgeResponse("{")).toBeNull();
   });
 
-  it("accepts native file-open events", () => {
+  it("accepts native dropped-file grants", () => {
     const event = {
       type: "event",
-      name: "file.opened",
-      payload: { name: "demo.md" },
+      name: "drop.files",
+      payload: {
+        files: [
+          { id: "grant-1", name: "demo.md", kind: "markdown", size: 128 },
+        ],
+      },
     };
     expect(decodeBridgeResponse(event)).toEqual(event);
   });
 
-  it("accepts native image-drop events", () => {
+  it("accepts native drag-state events", () => {
     const event = {
       type: "event",
-      name: "image.dropped",
-      payload: { sourcePaths: ["C:\\Pictures\\示例.png"] },
+      name: "drop.active",
+      payload: { active: true },
     };
     expect(decodeBridgeResponse(event)).toEqual(event);
   });

@@ -26,45 +26,26 @@ struct State {
   std::unique_ptr<BridgeDispatcher> bridge;
   bool maximized = false;
 };
-bool IsMarkdownPath(const std::filesystem::path& path) {
-  auto extension = path.extension().wstring();
-  for (auto& character : extension) character = static_cast<wchar_t>(towlower(character));
-  return extension == L".md" || extension == L".markdown";
-}
 void OpenDroppedFiles(HWND window, State& state,
                       const std::vector<std::filesystem::path>& dropped_paths) {
-  std::filesystem::path selected;
-  std::vector<std::filesystem::path> images;
-  for (const auto& path : dropped_paths) {
-    if (IsMarkdownPath(path)) selected = path;
-    else if (IsSupportedImagePath(path)) images.emplace_back(path);
-  }
-  if (selected.empty() && images.empty()) {
+  const auto grants = state.bridge->GrantDroppedFiles(dropped_paths);
+  if (grants.empty()) {
     MessageBoxW(window, L"请拖入 Markdown 文件或图片。", L"lw.MD", MB_OK | MB_ICONINFORMATION);
     return;
   }
-  if (selected.empty()) {
-    state.bridge->SetPendingImagePaths(images);
-    auto paths = nlohmann::json::array();
-    for (const auto& image : images) paths.push_back(WideToUtf8(image.wstring()));
-    const auto message = nlohmann::json{{"type", "event"},
-                                        {"name", "image.dropped"},
-                                        {"payload", {{"sourcePaths", std::move(paths)}}}};
-    if (!state.webview->PostJson(message.dump())) {
-      throw std::runtime_error("Cannot send dropped images to editor");
-    }
-    return;
+  auto files = nlohmann::json::array();
+  for (const auto& grant : grants) {
+    files.push_back({{"id", grant.id},
+                     {"name", grant.name},
+                     {"kind", grant.kind},
+                     {"size", grant.size}});
   }
-  if (GetPropW(window, kDirtyDocumentProperty) &&
-      MessageBoxW(window, L"当前文档尚未保存。\n\n确定放弃修改并打开拖入的文件吗？",
-                  L"lw.MD — 未保存", MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2) != IDYES) return;
-  state.bridge->SetCurrentDocumentPath(selected.wstring());
   const auto message = nlohmann::json{{"type", "event"},
-                                      {"name", "file.opened"},
-                                      {"payload", {{"path", WideToUtf8(selected.wstring())},
-                                                   {"name", WideToUtf8(selected.filename().wstring())},
-                                                   {"content", ReadUtf8File(selected.wstring())}}}};
-  if (!state.webview->PostJson(message.dump())) throw std::runtime_error("Cannot send dropped file to editor");
+                                      {"name", "drop.files"},
+                                      {"payload", {{"files", std::move(files)}}}};
+  if (!state.webview->PostJson(message.dump())) {
+    throw std::runtime_error("Cannot send dropped files to editor");
+  }
 }
 std::wstring FrontendContentPath() {
   wchar_t development_path[32768]{};
@@ -132,6 +113,21 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
           [dispatcher = state->bridge.get()](const std::string& request,
                                              WebViewHost::Reply reply) {
             dispatcher->Dispatch(request, std::move(reply));
+          },
+          [window, state](
+              const std::vector<std::filesystem::path>& dropped_paths) {
+            try {
+              OpenDroppedFiles(window, *state, dropped_paths);
+            } catch (const std::exception& error) {
+              MessageBoxA(window, error.what(), "lw.MD", MB_OK | MB_ICONERROR);
+            }
+          },
+          [state](const bool active) {
+            const auto message =
+                nlohmann::json{{"type", "event"},
+                               {"name", "drop.active"},
+                               {"payload", {{"active", active}}}};
+            state->webview->PostJson(message.dump());
           });
       return 0;
     }

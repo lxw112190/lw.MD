@@ -69,9 +69,8 @@ CI 生成的 EXE 暂未进行商业代码签名，因此 Windows SmartScreen 首
 
 ## 拖放说明
 
-- 拖到窗口标题栏：按原磁盘路径打开 Markdown 文件。
-- 拖到编辑工作区：WebView2 只能读取文件内容，无法获得原始磁盘路径，因此会作为未保存文档载入，首次保存时需要选择位置。
-- 拖入或粘贴图片：保存文档后，图片会复制到 Markdown 同目录的 `assets` 文件夹，并自动插入相对路径。
+- 将 Markdown 拖到窗口任意区域：按原磁盘路径打开，并正确解析同目录下的相对图片。
+- 点击编辑器工具栏的图片按钮，或直接拖入、粘贴图片：保存文档后，图片会复制到 Markdown 同目录的 `assets` 文件夹，并自动插入相对路径。
 
 ## Windows 集成
 
@@ -125,11 +124,11 @@ build\Release\lw.MD.exe
 推送与项目版本一致的 `v*` 标签后，CI 会自动创建 GitHub Release，并上传便携 ZIP 和 SHA-256 校验文件：
 
 ```powershell
-git tag -a v0.3.4 -m "lw.MD v0.3.4"
-git push origin v0.3.4
+git tag -a v0.3.5 -m "lw.MD v0.3.5"
+git push origin v0.3.5
 ```
 
-使用 `v0.3.4-beta.1`、`v0.3.4-rc.1` 等带后缀的标签时，会自动发布为 GitHub Pre-release。
+使用 `v0.3.5-beta.1`、`v0.3.5-rc.1` 等带后缀的标签时，会自动发布为 GitHub Pre-release。
 
 如需本地调试 WebView2，可在启动前设置 `LWMD_ENABLE_DEVTOOLS=1`；正式构建默认禁用开发者工具。
 

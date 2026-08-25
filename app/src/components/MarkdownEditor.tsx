@@ -1,12 +1,6 @@
 import Vditor from "vditor";
 import "vditor/dist/index.css";
-import {
-  forwardRef,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import {
   normalizeDocumentImage,
   normalizeDocumentImages,
@@ -26,14 +20,15 @@ export interface MarkdownEditorHandle {
 interface Props {
   value: string;
   onChange(value: string): void;
+  onChooseImages(): Promise<string[]>;
   onInsertImages(files: File[]): Promise<string[]>;
-  onOpenMarkdown(file: File): Promise<void>;
+  dropActive: boolean;
   theme: "light" | "dark";
 }
 
 export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
   function MarkdownEditor(
-    { value, onChange, onInsertImages, onOpenMarkdown, theme },
+    { value, onChange, onChooseImages, onInsertImages, dropActive, theme },
     ref,
   ) {
     const container = useRef<HTMLDivElement>(null);
@@ -41,8 +36,9 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     const valueRef = useRef(value);
     const readyRef = useRef(false);
     const themeRef = useRef(theme);
-    const [draggingFiles, setDraggingFiles] = useState(false);
+    const onChooseImagesRef = useRef(onChooseImages);
     themeRef.current = theme;
+    onChooseImagesRef.current = onChooseImages;
     useEffect(() => {
       if (!container.current) return;
       const editorContainer = container.current;
@@ -95,6 +91,20 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
           "insert-after",
           "table",
           "link",
+          {
+            name: "insert-image",
+            icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Zm0 16H5l3.5-4.5 2.5 3.01L14.5 13l4.5 6ZM8.5 10.5A1.5 1.5 0 1 1 8.5 7a1.5 1.5 0 0 1 0 3.5Z"/></svg>',
+            tip: "插入本地图片",
+            click: () => {
+              void onChooseImagesRef.current().then((paths) => {
+                if (paths.length > 0) {
+                  editor.current?.insertMD(
+                    paths.map((path) => `![](<${path}>)`).join("\n\n"),
+                  );
+                }
+              });
+            },
+          },
           "|",
           "undo",
           "redo",
@@ -148,15 +158,6 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
       );
     }, [theme]);
     useEffect(() => {
-      let dragDepth = 0;
-      const containsFiles = (event: DragEvent) =>
-        Array.from(event.dataTransfer?.items ?? []).some(
-          (item) => item.kind === "file",
-        );
-      const clearDragState = () => {
-        dragDepth = 0;
-        setDraggingFiles(false);
-      };
       const insertImages = async (files: File[]) => {
         const paths = await onInsertImages(files);
         if (paths.length === 0) return;
@@ -173,59 +174,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         event.stopPropagation();
         void insertImages(files);
       };
-      const onDragEnter = (event: DragEvent) => {
-        if (!containsFiles(event)) return;
-        event.preventDefault();
-        dragDepth += 1;
-        setDraggingFiles(true);
-      };
-      const onDrop = (event: DragEvent) => {
-        const files = Array.from(event.dataTransfer?.files ?? []);
-        if (files.length === 0) return;
-        event.preventDefault();
-        event.stopPropagation();
-        clearDragState();
-        const markdown = files.find((file) =>
-          /\.(?:md|markdown)$/i.test(file.name),
-        );
-        const images = files.filter(
-          (file) =>
-            file.type.startsWith("image/") ||
-            /\.(?:png|jpe?g|gif|webp|bmp|svg)$/i.test(file.name),
-        );
-        if (!markdown && images.length === 0) return;
-        event.dataTransfer!.dropEffect = "copy";
-        if (markdown) void onOpenMarkdown(markdown);
-        else void insertImages(images);
-      };
-      const onDragOver = (event: DragEvent) => {
-        if (containsFiles(event)) {
-          event.preventDefault();
-          if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
-        }
-      };
-      const onDragLeave = (event: DragEvent) => {
-        if (!containsFiles(event)) return;
-        dragDepth = Math.max(0, dragDepth - 1);
-        if (dragDepth === 0) setDraggingFiles(false);
-      };
       window.addEventListener("paste", onPaste, true);
-      window.addEventListener("dragenter", onDragEnter, true);
-      window.addEventListener("drop", onDrop, true);
-      window.addEventListener("dragover", onDragOver, true);
-      window.addEventListener("dragleave", onDragLeave, true);
-      window.addEventListener("dragend", clearDragState, true);
-      window.addEventListener("blur", clearDragState);
       return () => {
         window.removeEventListener("paste", onPaste, true);
-        window.removeEventListener("dragenter", onDragEnter, true);
-        window.removeEventListener("drop", onDrop, true);
-        window.removeEventListener("dragover", onDragOver, true);
-        window.removeEventListener("dragleave", onDragLeave, true);
-        window.removeEventListener("dragend", clearDragState, true);
-        window.removeEventListener("blur", clearDragState);
       };
-    }, [onInsertImages, onOpenMarkdown]);
+    }, [onInsertImages]);
     useImperativeHandle(ref, () => ({
       focus: () => editor.current?.focus(),
       getValue: () => editor.current?.getValue() ?? "",
@@ -256,7 +209,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     return (
       <div className="markdown-editor-shell">
         <div ref={container} className="markdown-editor" />
-        {draggingFiles && (
+        {dropActive && (
           <div className="drop-overlay" role="status">
             <strong>松开鼠标</strong>
             <span>打开 Markdown 或插入图片</span>
