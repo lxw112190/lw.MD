@@ -6,12 +6,15 @@
 #include "filesystem/file_service.h"
 #include "images/image_service.h"
 #include "recovery/recovery_service.h"
+#include "resources/frontend_cache.h"
 #include "settings/settings.h"
 
 #include <Windows.h>
 #include <ShlObj_core.h>
+#include <chrono>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -126,6 +129,51 @@ int TestDroppedFilePathExtraction() {
   if (paths[1] != std::filesystem::path(image)) return 32;
   return 0;
 }
+
+int TestFrontendCacheCleanup(const std::filesystem::path& test_root) {
+  const auto cache_root = test_root / L"frontend-cache";
+  std::filesystem::create_directories(cache_root);
+  const auto now = std::filesystem::file_time_type::clock::now();
+  const auto create_version = [&](const wchar_t* name, int age_hours) {
+    const auto path = cache_root / name;
+    std::filesystem::create_directories(path);
+    std::ofstream(path / L"index.html") << "cached";
+    std::error_code error;
+    std::filesystem::last_write_time(
+        path, now - std::chrono::hours(age_hours), error);
+    return error ? std::filesystem::path{} : path;
+  };
+
+  const auto current = create_version(L"aaaaaaaaaaaaaaaa", 96);
+  const auto recent_one = create_version(L"bbbbbbbbbbbbbbbb", 1);
+  const auto recent_two = create_version(L"cccccccccccccccc", 2);
+  const auto recent_three = create_version(L"dddddddddddddddd", 3);
+  const auto stale = create_version(L"eeeeeeeeeeeeeeee", 72);
+  if (current.empty() || recent_one.empty() || recent_two.empty() ||
+      recent_three.empty() || stale.empty()) {
+    return 36;
+  }
+
+  const auto unrelated = cache_root / L"not-a-payload-hash";
+  std::filesystem::create_directories(unrelated);
+  const auto hash_named_file = cache_root / L"ffffffffffffffff";
+  std::ofstream(hash_named_file) << "not a directory";
+
+  CleanupStaleFrontendCaches(cache_root, current, now);
+  if (!std::filesystem::exists(current)) return 37;
+  if (!std::filesystem::exists(recent_one) ||
+      !std::filesystem::exists(recent_two)) {
+    return 38;
+  }
+  if (!std::filesystem::exists(recent_three)) return 39;
+  if (std::filesystem::exists(stale)) return 40;
+  if (!std::filesystem::exists(unrelated)) return 41;
+  if (!std::filesystem::exists(hash_named_file)) return 42;
+
+  CleanupStaleFrontendCaches(cache_root / L"missing", current, now);
+  if (!std::filesystem::exists(current)) return 43;
+  return 0;
+}
 }  // namespace
 
 int main() {
@@ -148,6 +196,9 @@ int main() {
   if (!GetTempPathW(MAX_PATH, temporary_root)) return 1;
   const auto directory = std::filesystem::path(temporary_root) / L"lw-md-native-tests";
   std::filesystem::create_directories(directory);
+  if (const auto cache_cleanup_result = TestFrontendCacheCleanup(directory)) {
+    return cache_cleanup_result;
+  }
   const auto file = directory / L"中文-atomic.md";
   const std::string first = "# 简墨\n第一版";
   const std::string second = "# 简墨\n第二版 ✓";

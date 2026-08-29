@@ -1,0 +1,69 @@
+{
+  "locale": "zh_CN",
+  "icon": "material",
+  "themes": {
+    "light": {
+      "editor": "classic",
+      "content": "light",
+      "code": "github"
+    },
+    "dark": {
+      "editor": "dark",
+      "content": "dark",
+      "code": "github-dark"
+    }
+  },
+  "math": {
+    "engine": "KaTeX",
+    "inlineDigit": false
+  },
+  "resourceGroups": [
+    {
+      "feature": "Core Markdown parsing",
+      "paths": ["js/lute/lute.min.js"]
+    },
+    {
+      "feature": "Code highlighting",
+      "paths": [
+        "js/highlight.js/highlight.min.js",
+        "js/highlight.js/third-languages.js"
+      ]
+    },
+    {
+      "feature": "Mermaid diagrams",
+      "paths": ["js/mermaid"]
+    },
+    {
+      "feature": "Graphviz diagrams",
+      "paths": ["js/graphviz"]
+    },
+    {
+      "feature": "Flowchart diagrams",
+      "paths": ["js/flowchart.js"]
+    },
+    {
+      "feature": "Markmap mind maps",
+      "paths": ["js/markmap"]
+    },
+    {
+      "feature": "ECharts charts and mind maps",
+      "paths": ["js/echarts"]
+    },
+    {
+      "feature": "ABC music notation",
+      "paths": ["js/abcjs"]
+    },
+    {
+      "feature": "PlantUML encoding",
+      "paths": ["js/plantuml"]
+    },
+    {
+      "feature": "SMILES molecule diagrams",
+      "paths": ["js/smiles-drawer"]
+    },
+    {
+      "feature": "WaveDrom timing diagrams",
+      "paths": ["js/wavedrom"]
+    }
+  ]
+}

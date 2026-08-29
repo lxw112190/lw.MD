@@ -47,6 +47,7 @@ list(APPEND LWMD_FRONTEND_INPUTS
   "${CMAKE_CURRENT_SOURCE_DIR}/app/package-lock.json"
   "${CMAKE_CURRENT_SOURCE_DIR}/app/scripts/sync-vditor.mjs"
   "${CMAKE_CURRENT_SOURCE_DIR}/app/tsconfig.json"
+  "${CMAKE_CURRENT_SOURCE_DIR}/app/vditor-runtime.config.json"
   "${CMAKE_CURRENT_SOURCE_DIR}/app/vite.config.ts")
 add_custom_command(
   OUTPUT "${LWMD_FRONTEND_ZIP}"
@@ -70,7 +71,8 @@ add_executable(lw_md WIN32
   native/dragdrop/file_drop_target.cpp
   native/filesystem/file_service.cpp native/dialogs/file_dialog.cpp native/settings/settings.cpp
   native/images/image_service.cpp native/recovery/recovery_service.cpp
-  native/resources/frontend_bundle.cpp native/webview/webview_host.cpp resources/lw-md.rc
+  native/resources/frontend_bundle.cpp native/resources/frontend_cache.cpp
+  native/webview/webview_host.cpp resources/lw-md.rc
   resources/version.rc "${LWMD_GENERATED_DIR}/frontend_bundle.rc")
 add_dependencies(lw_md lwmd_frontend_bundle)
 target_include_directories(lw_md PRIVATE native ${WEBVIEW2_INCLUDE})
@@ -91,6 +93,7 @@ if(BUILD_TESTING)
     native/images/image_service.cpp native/recovery/recovery_service.cpp
     native/app/command_line.cpp native/associations/file_association.cpp
     native/dragdrop/file_drop_target.cpp native/settings/settings.cpp)
+  target_sources(lw_md_native_tests PRIVATE native/resources/frontend_cache.cpp)
   target_include_directories(lw_md_native_tests PRIVATE native)
   target_compile_definitions(lw_md_native_tests PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
   target_compile_options(lw_md_native_tests PRIVATE /W4 /permissive- /utf-8 /EHsc)

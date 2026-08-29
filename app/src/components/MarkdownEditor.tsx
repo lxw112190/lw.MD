@@ -1,6 +1,7 @@
 import Vditor from "vditor";
 import "vditor/dist/index.css";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import vditorRuntime from "../../vditor-runtime.config.json";
 import { normalizeDocumentImages } from "../markdown/documentImages";
 
 export interface MarkdownEditorHandle {
@@ -21,6 +22,15 @@ interface Props {
   onInsertImages(files: File[]): Promise<string[]>;
   dropActive: boolean;
   theme: "light" | "dark";
+}
+
+function applyEditorTheme(instance: Vditor, theme: "light" | "dark") {
+  const configuredTheme = vditorRuntime.themes[theme];
+  instance.setTheme(
+    configuredTheme.editor as "classic" | "dark",
+    configuredTheme.content,
+    configuredTheme.code,
+  );
 }
 
 export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
@@ -60,14 +70,19 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
       });
       const instance = new Vditor(container.current, {
         mode: "ir",
-        lang: "zh_CN",
+        lang: vditorRuntime.locale as "zh_CN",
         cache: { enable: false },
         cdn: "/vditor",
         height: "100%",
-        icon: "material",
+        icon: vditorRuntime.icon as "material",
         theme: "classic",
         preview: {
           markdown: { linkBase: "https://document.lwmd/" },
+          math: {
+            engine: vditorRuntime.math.engine as "KaTeX",
+            inlineDigit: vditorRuntime.math.inlineDigit,
+            macros: {},
+          },
         },
         toolbar: [
           "emoji",
@@ -119,11 +134,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
             scheduleImageScan();
             readyRef.current = true;
             const currentTheme = themeRef.current;
-            current.setTheme(
-              currentTheme === "dark" ? "dark" : "classic",
-              currentTheme === "dark" ? "dark" : "light",
-              currentTheme === "dark" ? "github-dark" : "github",
-            );
+            applyEditorTheme(current, currentTheme);
             current.focus();
           }),
         input: (nextValue) => {
@@ -155,11 +166,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
 
     useEffect(() => {
       if (!readyRef.current) return;
-      editor.current?.setTheme(
-        theme === "dark" ? "dark" : "classic",
-        theme === "dark" ? "dark" : "light",
-        theme === "dark" ? "github-dark" : "github",
-      );
+      const instance = editor.current;
+      if (instance) applyEditorTheme(instance, theme);
     }, [theme]);
     useEffect(() => {
       const insertImages = async (files: File[]) => {

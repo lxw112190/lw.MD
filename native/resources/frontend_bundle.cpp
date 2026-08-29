@@ -1,13 +1,12 @@
 #include "resources/frontend_bundle.h"
 
 #include "common/utf8.h"
+#include "resources/frontend_cache.h"
 
 #include <ShlObj.h>
 #include <Windows.h>
 #include <miniz.h>
 
-#include <algorithm>
-#include <chrono>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -16,7 +15,6 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
-#include <vector>
 
 namespace {
 constexpr int kFrontendResourceId = 101;
@@ -51,63 +49,13 @@ bool IsSafeRelativePath(const std::filesystem::path& path) {
   return true;
 }
 
-bool IsPayloadHash(const std::wstring& name) {
-  if (name.size() != 16) return false;
-  return std::all_of(name.begin(), name.end(), [](wchar_t value) {
-    return (value >= L'0' && value <= L'9') ||
-           (value >= L'a' && value <= L'f');
-  });
-}
-
-void CleanupStaleFrontendCaches(const std::filesystem::path& cache_root,
-                                const std::filesystem::path& current) {
-  SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
-  Sleep(15000);
-
-  std::error_code error;
-  std::vector<std::filesystem::directory_entry> versions;
-  for (std::filesystem::directory_iterator iterator(cache_root, error), end;
-       !error && iterator != end; iterator.increment(error)) {
-    if (!iterator->is_directory(error) || error) continue;
-    if (IsPayloadHash(iterator->path().filename().wstring())) {
-      versions.push_back(*iterator);
-    }
-  }
-  if (error) return;
-
-  std::sort(versions.begin(), versions.end(),
-            [](const auto& left, const auto& right) {
-              std::error_code left_error;
-              std::error_code right_error;
-              const auto left_time = left.last_write_time(left_error);
-              const auto right_time = right.last_write_time(right_error);
-              if (left_error || right_error) return left.path() < right.path();
-              return left_time > right_time;
-            });
-
-  const auto cutoff = std::filesystem::file_time_type::clock::now() -
-                      std::chrono::hours(48);
-  std::size_t retained_previous_versions = 0;
-  for (const auto& version : versions) {
-    if (version.path() == current) continue;
-    if (retained_previous_versions++ < 2) continue;
-    const auto modified = version.last_write_time(error);
-    if (error) {
-      error.clear();
-      continue;
-    }
-    if (modified < cutoff) {
-      std::filesystem::remove_all(version.path(), error);
-      error.clear();
-    }
-  }
-}
-
 void ScheduleFrontendCacheCleanup(const std::filesystem::path& cache_root,
                                   const std::filesystem::path& current) {
   try {
     std::thread([cache_root, current] {
       try {
+        SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
+        Sleep(15000);
         CleanupStaleFrontendCaches(cache_root, current);
       } catch (...) {
         // Cleanup is best-effort and must never affect application startup.
