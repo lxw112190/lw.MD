@@ -1,5 +1,12 @@
 import Vditor from "vditor";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { AboutDialog } from "./components/AboutDialog";
 import { FindReplacePanel } from "./components/FindReplacePanel";
 import {
@@ -61,9 +68,10 @@ export default function App() {
     name: string;
     content: string;
   } | null>(null);
+  const deferredOutlineContent = useDeferredValue(document.content);
   const outline = useMemo(
-    () => getMarkdownOutline(document.content),
-    [document.content],
+    () => getMarkdownOutline(deferredOutlineContent),
+    [deferredOutlineContent],
   );
   const title = `${document.name}${document.dirty ? " *" : ""} — lw.MD`;
   const acceptDocument = useCallback(

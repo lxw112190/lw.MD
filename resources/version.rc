@@ -2,8 +2,8 @@
 #include <windows.h>
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,3,5,0
- PRODUCTVERSION 0,3,5,0
+ FILEVERSION 0,3,6,0
+ PRODUCTVERSION 0,3,6,0
  FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
  FILEFLAGS 0x0L
  FILEOS VOS__WINDOWS32
@@ -16,12 +16,12 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "天天代码码天天"
       VALUE "FileDescription", "简洁轻量的本地 Markdown 编辑器"
-      VALUE "FileVersion", "0.3.5"
+      VALUE "FileVersion", "0.3.6"
       VALUE "InternalName", "lw.MD"
       VALUE "LegalCopyright", "Copyright © 2026 天天代码码天天"
       VALUE "OriginalFilename", "lw.MD.exe"
       VALUE "ProductName", "lw.MD（简墨）"
-      VALUE "ProductVersion", "0.3.5"
+      VALUE "ProductVersion", "0.3.6"
       VALUE "Comments", "作者：天天代码码天天；QQ：819069052；QQ群：C# 人工智能实践（758616458）"
     END
   END

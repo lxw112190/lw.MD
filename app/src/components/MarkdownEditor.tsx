@@ -1,10 +1,7 @@
 import Vditor from "vditor";
 import "vditor/dist/index.css";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
-import {
-  normalizeDocumentImage,
-  normalizeDocumentImages,
-} from "../markdown/documentImages";
+import { normalizeDocumentImages } from "../markdown/documentImages";
 
 export interface MarkdownEditorHandle {
   focus(): void;
@@ -37,23 +34,23 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     const readyRef = useRef(false);
     const themeRef = useRef(theme);
     const onChooseImagesRef = useRef(onChooseImages);
+    const scheduleImageScanRef = useRef<() => void>(() => undefined);
     themeRef.current = theme;
     onChooseImagesRef.current = onChooseImages;
     useEffect(() => {
       if (!container.current) return;
       const editorContainer = container.current;
-      const imageObserver = new MutationObserver((records) => {
-        records.forEach((record) => {
-          if (
-            record.type === "attributes" &&
-            record.target instanceof HTMLImageElement
-          ) {
-            normalizeDocumentImage(record.target);
-          }
-          record.addedNodes.forEach((node) => {
-            if (node instanceof HTMLElement) normalizeDocumentImages(node);
-          });
+      let imageScanFrame: number | null = null;
+      const scheduleImageScan = () => {
+        if (imageScanFrame !== null) return;
+        imageScanFrame = window.requestAnimationFrame(() => {
+          imageScanFrame = null;
+          normalizeDocumentImages(editorContainer);
         });
+      };
+      scheduleImageScanRef.current = scheduleImageScan;
+      const imageObserver = new MutationObserver(() => {
+        scheduleImageScan();
       });
       imageObserver.observe(editorContainer, {
         attributeFilter: ["src"],
@@ -63,6 +60,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
       });
       const instance = new Vditor(container.current, {
         mode: "ir",
+        lang: "zh_CN",
         cache: { enable: false },
         cdn: "/vditor",
         height: "100%",
@@ -118,12 +116,13 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
             if (current.getValue() !== latestValue) {
               current.setValue(latestValue, true);
             }
-            normalizeDocumentImages(editorContainer);
+            scheduleImageScan();
             readyRef.current = true;
             const currentTheme = themeRef.current;
             current.setTheme(
               currentTheme === "dark" ? "dark" : "classic",
               currentTheme === "dark" ? "dark" : "light",
+              currentTheme === "dark" ? "github-dark" : "github",
             );
             current.focus();
           }),
@@ -136,6 +135,10 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
       editor.current = instance;
       return () => {
         imageObserver.disconnect();
+        scheduleImageScanRef.current = () => undefined;
+        if (imageScanFrame !== null) {
+          window.cancelAnimationFrame(imageScanFrame);
+        }
         if (readyRef.current && instance.vditor?.element) instance.destroy();
         readyRef.current = false;
         editor.current = null;
@@ -146,7 +149,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
       valueRef.current = value;
       if (readyRef.current) {
         editor.current?.setValue(value, true);
-        if (container.current) normalizeDocumentImages(container.current);
+        scheduleImageScanRef.current();
       }
     }, [value]);
 
@@ -155,6 +158,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
       editor.current?.setTheme(
         theme === "dark" ? "dark" : "classic",
         theme === "dark" ? "dark" : "light",
+        theme === "dark" ? "github-dark" : "github",
       );
     }, [theme]);
     useEffect(() => {
