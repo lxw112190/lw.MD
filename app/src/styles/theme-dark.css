@@ -276,6 +276,30 @@
   background: #143d35;
 }
 
+:root[data-theme="dark"] .about-support {
+  border-color: #404040;
+  background: #1c1c1c;
+}
+
+:root[data-theme="dark"] .about-contact h3 {
+  color: #f5f5f4;
+}
+
+:root[data-theme="dark"] .about-contact dd {
+  color: #d6d3d1;
+}
+
+:root[data-theme="dark"] .about-contact dt,
+:root[data-theme="dark"] .about-contact dd small,
+:root[data-theme="dark"] .about-contact p,
+:root[data-theme="dark"] .about-sponsor figcaption {
+  color: #a8a29e;
+}
+
+:root[data-theme="dark"] .about-sponsor svg {
+  border-color: #404040;
+}
+
 :root[data-theme="dark"] .association-dialog {
   border-color: #404040;
   background: #242424;

@@ -207,7 +207,9 @@
 
 .about-dialog {
   position: relative;
-  width: min(420px, 100%);
+  width: min(580px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
   padding: 30px 28px 24px;
   border: 1px solid #e7e5e4;
   border-radius: 14px;
@@ -252,8 +254,91 @@
 }
 
 .about-description {
-  margin: 16px 0 20px;
+  margin: 16px 0 18px;
   font-size: 14px;
+}
+
+.about-support {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 170px;
+  align-items: center;
+  gap: 22px;
+  margin-bottom: 20px;
+  border: 1px solid #e7e5e4;
+  border-radius: 10px;
+  padding: 16px;
+  background: #fafaf9;
+}
+
+.about-contact {
+  min-width: 0;
+  text-align: left;
+}
+
+.about-contact h3 {
+  margin: 0 0 12px;
+  color: #292524;
+  font-size: 15px;
+}
+
+.about-contact dl {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+}
+
+.about-contact dl > div {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.about-contact dt,
+.about-contact p,
+.about-sponsor figcaption {
+  color: #78716c;
+}
+
+.about-contact dt,
+.about-contact dd {
+  font-size: 13px;
+}
+
+.about-contact dd {
+  margin: 0;
+  color: #44403c;
+  overflow-wrap: anywhere;
+}
+
+.about-contact dd small {
+  display: block;
+  margin-top: 3px;
+  color: #78716c;
+  font-size: 12px;
+}
+
+.about-contact p {
+  margin: 14px 0 0;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.about-sponsor {
+  margin: 0;
+}
+
+.about-sponsor svg {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border: 1px solid #e7e5e4;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.about-sponsor figcaption {
+  margin-top: 7px;
+  font-size: 11px;
 }
 
 .about-actions {
@@ -277,6 +362,21 @@
   margin: 20px 0 0;
   font-size: 12px;
   line-height: 1.75;
+}
+
+@media (max-width: 560px), (max-height: 680px) {
+  .about-dialog {
+    padding: 26px 20px 20px;
+  }
+
+  .about-support {
+    grid-template-columns: 1fr;
+  }
+
+  .about-sponsor {
+    width: min(170px, 100%);
+    margin: 0 auto;
+  }
 }
 
 .association-backdrop {

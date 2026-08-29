@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(lw_MD VERSION 0.3.7 LANGUAGES CXX)
+project(lw_MD VERSION 0.3.8 LANGUAGES CXX)
 
 if(NOT WIN32 OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
   message(FATAL_ERROR "lw.MD supports Windows x64 only")
@@ -48,7 +48,8 @@ list(APPEND LWMD_FRONTEND_INPUTS
   "${CMAKE_CURRENT_SOURCE_DIR}/app/scripts/sync-vditor.mjs"
   "${CMAKE_CURRENT_SOURCE_DIR}/app/tsconfig.json"
   "${CMAKE_CURRENT_SOURCE_DIR}/app/vditor-runtime.config.json"
-  "${CMAKE_CURRENT_SOURCE_DIR}/app/vite.config.ts")
+  "${CMAKE_CURRENT_SOURCE_DIR}/app/vite.config.ts"
+  "${CMAKE_CURRENT_SOURCE_DIR}/docs/assets/sponsor.jpg")
 add_custom_command(
   OUTPUT "${LWMD_FRONTEND_ZIP}"
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${LWMD_GENERATED_DIR}"

@@ -15,6 +15,7 @@
 ## Features
 
 - Instant-rendering Markdown editing with Vditor IR mode
+- Offline rendering for Mermaid diagrams and inline or block KaTeX formulas
 - New, open, atomic UTF-8 save, and Save As operations
 - Find, replace, case-sensitive matching, and result navigation
 - Drag and drop for Markdown files and images, plus clipboard image pasting
@@ -27,6 +28,8 @@
 - Windows context-menu, Open With, and default-app settings integration
 - Fully offline frontend assets; end users do not need Node.js
 - WebView2 bridge origin checks, navigation restrictions, and parameter validation
+
+Use a fenced code block with the `mermaid` language for diagrams. Use `$E=mc^2$` for inline formulas and `$$...$$` for block formulas.
 
 ## Quick Start
 
@@ -124,11 +127,11 @@ Every push runs frontend checks, the Release build, and native tests. A download
 Pushing a `v*` tag that matches the project version automatically creates a GitHub Release and uploads the portable ZIP and SHA-256 checksum:
 
 ```powershell
-git tag -a v0.3.7 -m "lw.MD v0.3.7"
-git push origin v0.3.7
+git tag -a v0.3.8 -m "lw.MD v0.3.8"
+git push origin v0.3.8
 ```
 
-Tags with suffixes such as `v0.3.7-beta.1` or `v0.3.7-rc.1` are automatically published as GitHub pre-releases.
+Tags with suffixes such as `v0.3.8-beta.1` or `v0.3.8-rc.1` are automatically published as GitHub pre-releases.
 
 To debug WebView2 locally, set `LWMD_ENABLE_DEVTOOLS=1` before launching the application. Developer tools are disabled by default in production builds.
 
