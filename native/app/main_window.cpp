@@ -21,9 +21,11 @@ namespace {
 constexpr wchar_t kClassName[] = L"lw.MD.MainWindow";
 constexpr int kDefaultWindowWidth = 1180;
 constexpr int kDefaultWindowHeight = 760;
+constexpr UINT kInitializeWebViewMessage = WM_APP + 1;
 struct State {
   std::unique_ptr<WebViewHost> webview;
   std::unique_ptr<BridgeDispatcher> bridge;
+  std::wstring loading_text = L"正在启动 lw.MD…";
   bool maximized = false;
 };
 void OpenDroppedFiles(HWND window, State& state,
@@ -53,6 +55,34 @@ std::wstring FrontendContentPath() {
                                                static_cast<DWORD>(std::size(development_path)));
   if (length > 0 && length < std::size(development_path)) return development_path;
   return ExtractBundledFrontend().wstring();
+}
+void InitializeWebView(HWND window, State& state) {
+  const auto folder = FrontendContentPath();
+  if (!std::filesystem::exists(std::filesystem::path(folder) / L"index.html")) {
+    throw std::runtime_error("Embedded frontend is incomplete");
+  }
+  auto* const webview = state.webview.get();
+  state.webview->Create(
+      window, folder,
+      [dispatcher = state.bridge.get()](const std::string& request,
+                                        WebViewHost::Reply reply) {
+        dispatcher->Dispatch(request, std::move(reply));
+      },
+      [state_pointer = &state, window](
+          const std::vector<std::filesystem::path>& dropped_paths) {
+        try {
+          OpenDroppedFiles(window, *state_pointer, dropped_paths);
+        } catch (const std::exception& error) {
+          MessageBoxA(window, error.what(), "lw.MD", MB_OK | MB_ICONERROR);
+        }
+      },
+      [webview](const bool active) {
+        const auto message =
+            nlohmann::json{{"type", "event"},
+                           {"name", "drop.active"},
+                           {"payload", {{"active", active}}}};
+        webview->PostJson(message.dump());
+      });
 }
 SavedWindowState FitWindowToVisibleMonitor(SavedWindowState saved) {
   RECT requested{saved.left, saved.top, saved.left + saved.width,
@@ -102,33 +132,36 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
           [webview](const std::wstring& path) { webview->SetDocumentFolder(path); });
       if (launch_path && *launch_path) {
         owned->bridge->SetLaunchDocumentPath(**launch_path);
+        owned->loading_text =
+            L"正在打开 " +
+            std::filesystem::path(**launch_path).filename().wstring() + L"…";
       }
       state = owned.release(); SetWindowLongPtrW(window, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(state));
-      std::wstring folder;
-      try { folder = FrontendContentPath(); }
-      catch (const std::exception& error) { MessageBoxA(window, error.what(), "lw.MD", MB_OK | MB_ICONERROR); PostMessageW(window, WM_CLOSE, 0, 0); return 0; }
-      if (!std::filesystem::exists(std::filesystem::path(folder) / L"index.html")) { MessageBoxW(window, L"应用前端资源不完整，请重新下载 lw.MD.exe。", L"lw.MD", MB_OK | MB_ICONERROR); PostMessageW(window, WM_CLOSE, 0, 0); return 0; }
-      state->webview->Create(
-          window, folder,
-          [dispatcher = state->bridge.get()](const std::string& request,
-                                             WebViewHost::Reply reply) {
-            dispatcher->Dispatch(request, std::move(reply));
-          },
-          [window, state](
-              const std::vector<std::filesystem::path>& dropped_paths) {
-            try {
-              OpenDroppedFiles(window, *state, dropped_paths);
-            } catch (const std::exception& error) {
-              MessageBoxA(window, error.what(), "lw.MD", MB_OK | MB_ICONERROR);
-            }
-          },
-          [state](const bool active) {
-            const auto message =
-                nlohmann::json{{"type", "event"},
-                               {"name", "drop.active"},
-                               {"payload", {{"active", active}}}};
-            state->webview->PostJson(message.dump());
-          });
+      PostMessageW(window, kInitializeWebViewMessage, 0, 0);
+      return 0;
+    }
+    case kInitializeWebViewMessage:
+      if (state) {
+        try {
+          InitializeWebView(window, *state);
+        } catch (const std::exception& error) {
+          MessageBoxA(window, error.what(), "lw.MD", MB_OK | MB_ICONERROR);
+          PostMessageW(window, WM_CLOSE, 0, 0);
+        }
+      }
+      return 0;
+    case WM_PAINT: {
+      PAINTSTRUCT paint{};
+      const auto context = BeginPaint(window, &paint);
+      RECT bounds{};
+      GetClientRect(window, &bounds);
+      FillRect(context, &bounds, GetSysColorBrush(COLOR_WINDOW));
+      SetBkMode(context, TRANSPARENT);
+      SetTextColor(context, GetSysColor(COLOR_WINDOWTEXT));
+      const auto text = state ? state->loading_text : L"正在启动 lw.MD…";
+      DrawTextW(context, text.c_str(), -1, &bounds,
+                DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+      EndPaint(window, &paint);
       return 0;
     }
     case WM_SIZE:
@@ -193,8 +226,13 @@ int RunMainWindow(HINSTANCE instance,
   std::optional<SavedWindowState> restored;
   try { restored = LoadWindowState(); }
   catch (...) {}
+  std::wstring initial_title = L"lw.MD — 简墨";
+  if (launch_path) {
+    initial_title =
+        std::filesystem::path(*launch_path).filename().wstring() + L" — lw.MD";
+  }
   const auto window = CreateWindowExW(
-      0, kClassName, L"lw.MD — 简墨", WS_OVERLAPPEDWINDOW,
+      0, kClassName, initial_title.c_str(), WS_OVERLAPPEDWINDOW,
       restored ? restored->left : CW_USEDEFAULT,
       restored ? restored->top : CW_USEDEFAULT,
       restored ? restored->width : kDefaultWindowWidth,

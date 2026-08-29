@@ -51,6 +51,7 @@ export default function App() {
   const [status, setStatus] = useState("就绪");
   const [settings, setSettings] = useState(defaultSettings);
   const [settingsReady, setSettingsReady] = useState(false);
+  const [bootReady, setBootReady] = useState(false);
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
   const [exportingPdf, setExportingPdf] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -300,33 +301,43 @@ export default function App() {
     documentRef.current = document;
   }, [document]);
   useEffect(() => {
-    if (!settingsReady) return;
     let cancelled = false;
     void (async () => {
-      try {
-        const launchDocument = await desktop.file.getLaunch();
-        if (!cancelled && launchDocument) {
-          acceptDocument(launchDocument, false);
+      const [settingsResult, launchResult, recoveryResult] =
+        await Promise.allSettled([
+          desktop.app.getSettings(),
+          desktop.file.getLaunch(),
+          desktop.recovery.get(),
+        ] as const);
+      if (cancelled) return;
+
+      setSettings(
+        settingsResult.status === "fulfilled"
+          ? settingsResult.value
+          : defaultSettings,
+      );
+      setSettingsReady(true);
+
+      if (launchResult.status === "fulfilled") {
+        if (launchResult.value) {
+          acceptDocument(launchResult.value, false);
           setStatus("已从 Windows 打开文件");
         }
-      } catch (error) {
-        if (!cancelled && !isDesktopUnavailable(error)) {
-          setStatus(errorMessage(error));
-        }
+      } else if (!isDesktopUnavailable(launchResult.reason)) {
+        setStatus(errorMessage(launchResult.reason));
       }
-      try {
-        const snapshot = await desktop.recovery.get();
-        if (cancelled) return;
-        if (snapshot) setPendingRecovery(snapshot);
-        else setRecoveryReady(true);
-      } catch {
-        if (!cancelled) setRecoveryReady(true);
+
+      if (recoveryResult.status === "fulfilled" && recoveryResult.value) {
+        setPendingRecovery(recoveryResult.value);
+      } else {
+        setRecoveryReady(true);
       }
+      setBootReady(true);
     })();
     return () => {
       cancelled = true;
     };
-  }, [acceptDocument, settingsReady]);
+  }, [acceptDocument]);
   useEffect(() => {
     if (!recoveryReady) return;
     if (!document.dirty) {
@@ -409,13 +420,6 @@ export default function App() {
     [acceptDocument, confirmDiscard, document.path],
   );
   useEffect(() => {
-    void desktop.app
-      .getSettings()
-      .then(setSettings)
-      .catch(() => setSettings(defaultSettings))
-      .finally(() => setSettingsReady(true));
-  }, []);
-  useEffect(() => {
     if (!settingsReady) return;
     void desktop.app.setSettings(settings).catch(() => undefined);
   }, [settings, settingsReady]);
@@ -464,6 +468,15 @@ export default function App() {
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [createNew, open, save]);
+  if (!bootReady) {
+    return (
+      <main className="boot-screen" role="status" aria-live="polite">
+        <span className="boot-spinner" aria-hidden="true" />
+        <strong>lw.MD</strong>
+        <span>正在准备编辑器…</span>
+      </main>
+    );
+  }
   return (
     <main
       className={`app-shell${settings.outlineVisible ? " with-outline" : ""}`}

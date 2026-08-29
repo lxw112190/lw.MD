@@ -6,9 +6,74 @@
     <title>lw.MD</title>
     <link rel="icon" href="/app-icon.png" />
     <link rel="preload" href="/vditor/dist/js/lute/lute.min.js" as="script" />
+    <style>
+      html,
+      body,
+      #root {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+      }
+      .boot-screen {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        color: #57534e;
+        background: #f5f5f4;
+        font:
+          14px "Microsoft YaHei UI",
+          system-ui,
+          sans-serif;
+      }
+      .boot-screen strong {
+        color: #292524;
+        font-size: 18px;
+      }
+      .boot-spinner {
+        width: 24px;
+        height: 24px;
+        border: 2px solid #d6d3d1;
+        border-top-color: #0f766e;
+        border-radius: 50%;
+        animation: boot-spin 0.8s linear infinite;
+      }
+      @keyframes boot-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @media (prefers-color-scheme: dark) {
+        .boot-screen {
+          color: #a8a29e;
+          background: #181818;
+        }
+        .boot-screen strong {
+          color: #e7e5e4;
+        }
+        .boot-spinner {
+          border-color: #44403c;
+          border-top-color: #5eead4;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-spinner {
+          animation: none;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot-screen" role="status">
+        <span class="boot-spinner" aria-hidden="true"></span>
+        <strong>lw.MD</strong>
+        <span>正在启动编辑器…</span>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

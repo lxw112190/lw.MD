@@ -144,6 +144,11 @@ void WebViewHost::Create(HWND window, const std::wstring& content_folder,
     return environment->CreateCoreWebView2Controller(window_, Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>([this, content_folder](HRESULT status, ICoreWebView2Controller* controller) -> HRESULT {
       if (FAILED(status) || !controller) return status;
       controller_ = controller; controller_->get_CoreWebView2(&webview_);
+      Microsoft::WRL::ComPtr<ICoreWebView2Controller2> controller2;
+      if (SUCCEEDED(controller_.As(&controller2))) {
+        const COREWEBVIEW2_COLOR background{255, 245, 245, 244};
+        controller2->put_DefaultBackgroundColor(background);
+      }
       Microsoft::WRL::ComPtr<ICoreWebView2Controller4> controller4;
       if (SUCCEEDED(controller_.As(&controller4)) &&
           SUCCEEDED(controller4->put_AllowExternalDrop(FALSE)) &&
