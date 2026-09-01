@@ -124,6 +124,13 @@
   padding: 8px 14px;
 }
 
+:root[data-theme="dark"] .markdown-editor .vditor-reset mark {
+  color: #fef3c7;
+  background: #854d0e;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
 :root[data-theme="dark"] .markdown-editor .vditor-ir h1,
 :root[data-theme="dark"] .markdown-editor .vditor-ir h2 {
   border-bottom-color: #343434;

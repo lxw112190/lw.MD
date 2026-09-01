@@ -17,6 +17,7 @@
 - Vditor IR 即时渲染 Markdown 编辑
 - 即时渲染与“源码 + 预览”双编辑模式，可记住上次选择
 - Mermaid 图表与 KaTeX 行内、块级数学公式离线渲染
+- 使用 `==文字==` 标记轻量高亮，并同步支持 PDF 导出
 - 新建、打开、UTF-8 原子保存和另存为
 - 查找、替换、区分大小写及上下匹配导航
 - Markdown 与图片拖放、剪贴板图片粘贴
@@ -31,7 +32,7 @@
 - 前端资源完全离线，最终用户无需安装 Node.js
 - WebView2 原生桥接来源校验、导航限制和参数校验
 
-Mermaid 使用语言标记为 `mermaid` 的围栏代码块；行内公式使用 `$E=mc^2$`，块级公式使用 `$$...$$`。
+Mermaid 使用语言标记为 `mermaid` 的围栏代码块；行内公式使用 `$E=mc^2$`，块级公式使用 `$$...$$`；需要强调的文字可写成 `==重点内容==`。
 
 ## 快速开始
 
@@ -129,11 +130,11 @@ build\Release\lw.MD.exe
 推送与项目版本一致的 `v*` 标签后，CI 会自动创建 GitHub Release，并上传便携 ZIP 和 SHA-256 校验文件：
 
 ```powershell
-git tag -a v0.4.2 -m "lw.MD v0.4.2"
-git push origin v0.4.2
+git tag -a v0.4.3 -m "lw.MD v0.4.3"
+git push origin v0.4.3
 ```
 
-使用 `v0.4.2-beta.1`、`v0.4.2-rc.1` 等带后缀的标签时，会自动发布为 GitHub Pre-release。
+使用 `v0.4.3-beta.1`、`v0.4.3-rc.1` 等带后缀的标签时，会自动发布为 GitHub Pre-release。
 
 如需本地调试 WebView2，可在启动前设置 `LWMD_ENABLE_DEVTOOLS=1`；正式构建默认禁用开发者工具。
 

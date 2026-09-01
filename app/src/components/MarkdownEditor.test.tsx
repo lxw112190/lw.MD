@@ -16,6 +16,12 @@ const mock = vi.hoisted(() => {
           click(): void;
         }
     >;
+    preview: {
+      markdown: {
+        linkBase: string;
+        mark: boolean;
+      };
+    };
   }
 
   class MockVditor {
@@ -117,6 +123,36 @@ describe("MarkdownEditor", () => {
     expect(instance.value).toBe("# 从 Windows 打开的文档");
     expect(instance.setValues).toEqual(["# 从 Windows 打开的文档"]);
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("enables Markdown mark syntax in every editor mode", async () => {
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    const common = {
+      value: "==重点==",
+      theme: "light" as const,
+      dropActive: false,
+      onChange: vi.fn(),
+      onChooseImages: vi.fn(async () => [] as string[]),
+      onInsertImages: vi.fn(async () => [] as string[]),
+    };
+
+    await act(async () => {
+      root?.render(<MarkdownEditor {...common} mode="ir" />);
+    });
+    await act(async () => {
+      root?.render(<MarkdownEditor {...common} mode="sv" />);
+    });
+
+    expect(
+      mock.MockVditor.instances.map(
+        (instance) => instance.options.preview.markdown,
+      ),
+    ).toEqual([
+      { linkBase: "https://document.lwmd/", mark: true },
+      { linkBase: "https://document.lwmd/", mark: true },
+    ]);
   });
 
   it("inserts images selected from the editor toolbar", async () => {

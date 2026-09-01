@@ -175,6 +175,13 @@
     text-decoration: underline;
   }
 
+  .print-document mark {
+    color: #713f12;
+    background: #fef3c7;
+    border-radius: 2px;
+    padding: 0 2px;
+  }
+
   .print-document .vditor-copy,
   .print-document .vditor-tooltipped {
     display: none !important;

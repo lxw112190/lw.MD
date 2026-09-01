@@ -42,3 +42,10 @@
   background: #f6fdf9;
   padding: 8px 14px;
 }
+
+:root:not([data-theme="dark"]) .markdown-editor .vditor-reset mark {
+  color: #854d0e;
+  background: #fef3a8;
+  border-radius: 2px;
+  padding: 0 2px;
+}

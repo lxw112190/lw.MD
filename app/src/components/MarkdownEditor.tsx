@@ -3,6 +3,7 @@ import "vditor/dist/index.css";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import vditorRuntime from "../../vditor-runtime.config.json";
 import { normalizeDocumentImages } from "../markdown/documentImages";
+import { createDocumentMarkdownOptions } from "../markdown/vditorMarkdown";
 import type { EditorMode } from "../editor/editorMode";
 
 export interface MarkdownEditorHandle {
@@ -87,7 +88,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         icon: vditorRuntime.icon as "material",
         theme: "classic",
         preview: {
-          markdown: { linkBase: "https://document.lwmd/" },
+          markdown: createDocumentMarkdownOptions(),
           math: {
             engine: vditorRuntime.math.engine as "KaTeX",
             inlineDigit: vditorRuntime.math.inlineDigit,

@@ -40,6 +40,7 @@ import {
 import type { ExternalFileState } from "./document/externalFileState";
 import { addRecentFile, fileNameFromPath } from "./document/recentFiles";
 import { getMarkdownOutline } from "./markdown/outline";
+import { createDocumentMarkdownOptions } from "./markdown/vditorMarkdown";
 import { waitForPrintAssets } from "./pdf/printAssets";
 import { editorModeLabel } from "./editor/editorMode";
 
@@ -265,7 +266,7 @@ export default function App() {
         cdn: "/vditor",
         lang: "zh_CN",
         mode: "light",
-        markdown: { linkBase: "https://document.lwmd/" },
+        markdown: createDocumentMarkdownOptions(),
         render: { media: { enable: false } },
       });
       await waitForPrintAssets(target);
