@@ -9,6 +9,18 @@ std::string ReadUtf8File(const std::wstring& path) {
   if (!input) throw std::runtime_error("Unable to read file");
   return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
 }
+FileReadResult ReadUtf8FileWithRevision(const std::wstring& path) {
+  std::ifstream input(std::filesystem::path(path), std::ios::binary);
+  if (!input) throw std::runtime_error("Unable to read file");
+  std::string content{std::istreambuf_iterator<char>(input),
+                      std::istreambuf_iterator<char>()};
+  FileRevision revision{};
+  FillFileRevisionFromContent(path, content, revision);
+  FileReadResult result;
+  result.content = std::move(content);
+  result.revision = revision;
+  return result;
+}
 void WriteUtf8FileAtomically(const std::wstring& path, const std::string& content) {
   const std::filesystem::path target(path);
   if (target.empty() || !target.has_parent_path()) throw std::runtime_error("Invalid file path");

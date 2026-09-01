@@ -202,11 +202,27 @@ export default function App() {
         }
       } catch (error) {
         if (isBridgeErrorCode(error, "FILE_CONFLICT")) {
-          setExternalFileState((current) =>
-            current.kind === "changed"
-              ? current
-              : { kind: "changed", observedRevision: document.revision! },
-          );
+          let observedRevision = document.revision;
+          if (document.path && document.revision) {
+            try {
+              const check = await desktop.file.checkRevision(
+                document.path,
+                document.revision,
+              );
+              if (check.state === "changed" && check.revision) {
+                observedRevision = check.revision;
+              }
+            } catch {
+              // Keep the previous baseline if the diagnostic check fails.
+            }
+          }
+          if (observedRevision) {
+            setExternalFileState((current) =>
+              current.kind === "changed"
+                ? current
+                : { kind: "changed", observedRevision },
+            );
+          }
           setConflictDialogOpen(true);
         } else if (isBridgeErrorCode(error, "FILE_MISSING")) {
           setExternalFileState({ kind: "missing" });
@@ -218,7 +234,14 @@ export default function App() {
     [document, externalFileState],
   );
   const reloadFromDisk = useCallback(async () => {
-    const path = documentRef.current.path;
+    const current = documentRef.current;
+    if (current.dirty) {
+      const confirmed = window.confirm(
+        "重新加载将放弃当前未保存的修改，确定继续吗？",
+      );
+      if (!confirmed) return;
+    }
+    const path = current.path;
     if (!path) return;
     try {
       acceptDocument(await desktop.file.read(path));

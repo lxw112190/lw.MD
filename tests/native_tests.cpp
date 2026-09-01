@@ -226,6 +226,12 @@ int main() {
       FileRevisionHashHex(first_revision).size() != 64U) {
     return 44;
   }
+  const auto consistent_read = ReadUtf8FileWithRevision(file.wstring());
+  if (consistent_read.content != first ||
+      !SameFileContent(consistent_read.revision, first_revision) ||
+      consistent_read.revision.size != first.size()) {
+    return 47;
+  }
   WriteUtf8FileAtomically(file.wstring(), second);
   if (ReadUtf8File(file.wstring()) != second) return 3;
   bool conflict_detected = false;

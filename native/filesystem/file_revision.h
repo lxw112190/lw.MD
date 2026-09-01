@@ -11,5 +11,8 @@ struct FileRevision {
 };
 
 FileRevision GetFileRevision(const std::wstring& path);
+void FillFileRevisionFromContent(const std::wstring& path,
+                                 const std::string& content,
+                                 FileRevision& revision);
 bool SameFileContent(const FileRevision& left, const FileRevision& right);
 std::string FileRevisionHashHex(const FileRevision& revision);

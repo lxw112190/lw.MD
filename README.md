@@ -129,11 +129,11 @@ build\Release\lw.MD.exe
 推送与项目版本一致的 `v*` 标签后，CI 会自动创建 GitHub Release，并上传便携 ZIP 和 SHA-256 校验文件：
 
 ```powershell
-git tag -a v0.4.0 -m "lw.MD v0.4.0"
-git push origin v0.4.0
+git tag -a v0.4.1 -m "lw.MD v0.4.1"
+git push origin v0.4.1
 ```
 
-使用 `v0.4.0-beta.1`、`v0.4.0-rc.1` 等带后缀的标签时，会自动发布为 GitHub Pre-release。
+使用 `v0.4.1-beta.1`、`v0.4.1-rc.1` 等带后缀的标签时，会自动发布为 GitHub Pre-release。
 
 如需本地调试 WebView2，可在启动前设置 `LWMD_ENABLE_DEVTOOLS=1`；正式构建默认禁用开发者工具。
 

@@ -264,17 +264,17 @@ FileRevision ParseRevision(const json& value) {
   return revision;
 }
 
-json DocumentJson(const std::wstring& path, std::string content) {
-  FileRevision revision{};
+json DocumentJson(const std::wstring& path) {
+  FileReadResult read{};
   try {
-    revision = GetFileRevision(path);
+    read = ReadUtf8FileWithRevision(path);
   } catch (...) {
     throw std::runtime_error("FILE_REVISION_FAILED");
   }
   return {{"path", WideToUtf8(path)},
           {"name", WideToUtf8(fs::path(path).filename().wstring())},
-          {"content", std::move(content)},
-          {"revision", RevisionJson(revision)}};
+          {"content", std::move(read.content)},
+          {"revision", RevisionJson(read.revision)}};
 }
 }  // namespace
 
@@ -549,10 +549,9 @@ void BridgeDispatcher::Dispatch(const std::string& raw, Reply reply) {
       }
       const auto path = grant->second.path.wstring();
       ValidateReadableMarkdown(path);
-      const auto content = ReadUtf8File(path);
       dropped_file_grants_.clear();
       SetCurrentDocumentPath(path);
-      reply(Success(id, DocumentJson(path, content)).dump());
+      reply(Success(id, DocumentJson(path)).dump());
       return;
     }
     if (method == "file.getLaunch") {
@@ -567,10 +566,9 @@ void BridgeDispatcher::Dispatch(const std::string& raw, Reply reply) {
       }
       ValidateReadableMarkdown(launch_document_path_);
       const auto path = launch_document_path_;
-      const auto content = ReadUtf8File(path);
       launch_document_path_.clear();
       SetCurrentDocumentPath(path);
-      reply(Success(id, DocumentJson(path, content)).dump());
+      reply(Success(id, DocumentJson(path)).dump());
       return;
     }
     if (method == "file.clearCurrent") {
@@ -586,7 +584,7 @@ void BridgeDispatcher::Dispatch(const std::string& raw, Reply reply) {
       }
       ValidateReadableMarkdown(*path);
       SetCurrentDocumentPath(*path);
-      reply(Success(id, DocumentJson(*path, ReadUtf8File(*path))).dump());
+      reply(Success(id, DocumentJson(*path)).dump());
       return;
     }
     if (method == "file.read") {
@@ -599,7 +597,7 @@ void BridgeDispatcher::Dispatch(const std::string& raw, Reply reply) {
         return;
       }
       SetCurrentDocumentPath(path);
-      reply(Success(id, DocumentJson(path, ReadUtf8File(path))).dump());
+      reply(Success(id, DocumentJson(path)).dump());
       return;
     }
     if (method == "file.checkRevision") {

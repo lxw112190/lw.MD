@@ -109,3 +109,18 @@ std::string FileRevisionHashHex(const FileRevision& revision) {
   for (const auto byte : revision.sha256) output << std::setw(2) << static_cast<int>(byte);
   return output.str();
 }
+
+void FillFileRevisionFromContent(const std::wstring& path,
+                                 const std::string& content,
+                                 FileRevision& revision) {
+  WIN32_FILE_ATTRIBUTE_DATA attributes{};
+  if (!GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &attributes) ||
+      (attributes.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+    throw std::runtime_error("Unable to inspect file revision");
+  }
+  revision.size = content.size();
+  revision.last_write_time = FileTimeValue(attributes.ftLastWriteTime);
+  Sha256Hasher hasher;
+  hasher.Update(content.data(), content.size());
+  revision.sha256 = hasher.Finish();
+}
