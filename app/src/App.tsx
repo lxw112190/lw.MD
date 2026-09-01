@@ -41,6 +41,7 @@ import type { ExternalFileState } from "./document/externalFileState";
 import { addRecentFile, fileNameFromPath } from "./document/recentFiles";
 import { getMarkdownOutline } from "./markdown/outline";
 import { waitForPrintAssets } from "./pdf/printAssets";
+import { editorModeLabel } from "./editor/editorMode";
 
 const recoveryIntervalMs = 15_000;
 const recoveryDebounceMs = 1_500;
@@ -49,6 +50,7 @@ const defaultSettings: DesktopSettings = {
   theme: "system",
   outlineVisible: true,
   recentFiles: [],
+  editorMode: "ir",
 };
 
 export default function App() {
@@ -72,7 +74,6 @@ export default function App() {
     { kind: "none" },
   );
   const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
-  const [externalNoticeDismissed, setExternalNoticeDismissed] = useState(false);
   const editor = useRef<MarkdownEditorHandle>(null);
   const printDocument = useRef<HTMLDivElement>(null);
   const documentRef = useRef(document);
@@ -104,7 +105,6 @@ export default function App() {
         revision: result.revision,
       });
       setExternalFileState({ kind: "none" });
-      setExternalNoticeDismissed(false);
       setSettings((current) => ({
         ...current,
         recentFiles: addRecentFile(current.recentFiles, result.path),
@@ -128,7 +128,6 @@ export default function App() {
     void desktop.file.clearCurrent().catch(() => undefined);
     setDocument(createUntitledDocument());
     setExternalFileState({ kind: "none" });
-    setExternalNoticeDismissed(false);
     setStatus("新建文档");
   }, [confirmDiscard]);
   const open = useCallback(async () => {
@@ -161,6 +160,11 @@ export default function App() {
   );
   const save = useCallback(
     async (saveAs = false) => {
+      if (!saveAs && externalFileState.kind !== "none") {
+        setConflictDialogOpen(true);
+        setStatus("检测到文件冲突，请先选择处理方式");
+        return;
+      }
       try {
         const result =
           !saveAs && document.path
@@ -190,7 +194,6 @@ export default function App() {
             ),
           );
           setExternalFileState({ kind: "none" });
-          setExternalNoticeDismissed(false);
           setSettings((current) => ({
             ...current,
             recentFiles: addRecentFile(current.recentFiles, result.path),
@@ -212,7 +215,7 @@ export default function App() {
         setStatus(errorMessage(error));
       }
     },
-    [document],
+    [document, externalFileState],
   );
   const reloadFromDisk = useCallback(async () => {
     const path = documentRef.current.path;
@@ -226,7 +229,6 @@ export default function App() {
     }
   }, [acceptDocument]);
   const continueWithCurrentContent = useCallback(() => {
-    setExternalNoticeDismissed(true);
     setConflictDialogOpen(false);
     setStatus("继续编辑当前内容；保存前请先处理文件冲突");
   }, []);
@@ -344,7 +346,6 @@ export default function App() {
         revision: null,
       });
       setExternalFileState({ kind: "none" });
-      setExternalNoticeDismissed(false);
       setPendingRecovery(null);
       setRecoveryReady(true);
       setStatus("已恢复上次未保存的内容，请确认后保存");
@@ -519,13 +520,11 @@ export default function App() {
           ) {
             if (result.state === "missing") {
               setExternalFileState({ kind: "missing" });
-              setExternalNoticeDismissed(false);
             } else if (result.state === "changed" && result.revision) {
               setExternalFileState({
                 kind: "changed",
                 observedRevision: result.revision,
               });
-              setExternalNoticeDismissed(false);
             } else if (result.revision) {
               setExternalFileState({ kind: "none" });
               setDocument((previous) =>
@@ -700,6 +699,24 @@ export default function App() {
                   <option value="dark">深色</option>
                 </select>
               </label>
+              <label>
+                编辑模式
+                <select
+                  className="theme-select"
+                  value={settings.editorMode}
+                  onChange={(event) =>
+                    setSettings((current) => ({
+                      ...current,
+                      editorMode: event.target
+                        .value as keyof typeof editorModeLabel,
+                    }))
+                  }
+                  aria-label="编辑模式"
+                >
+                  <option value="ir">{editorModeLabel.ir}</option>
+                  <option value="sv">{editorModeLabel.sv}</option>
+                </select>
+              </label>
             </div>
           </details>
           <button
@@ -713,7 +730,6 @@ export default function App() {
       <ExternalFileNotice
         state={externalFileState}
         dirty={document.dirty}
-        dismissed={externalNoticeDismissed}
         onReload={() => void reloadFromDisk()}
         onSaveAs={() => void save(true)}
         onContinue={continueWithCurrentContent}
@@ -748,11 +764,12 @@ export default function App() {
           onInsertImages={savePastedImages}
           dropActive={dropActive}
           theme={resolvedTheme}
+          mode={settings.editorMode}
         />
       </section>
       <footer>
         <span>{document.content.length} 字符</span>
-        <span>Markdown</span>
+        <span>{editorModeLabel[settings.editorMode]}</span>
         <span>{document.dirty ? "未保存" : "已保存"}</span>
         <span>{status}</span>
       </footer>

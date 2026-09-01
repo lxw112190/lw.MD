@@ -1,4 +1,5 @@
 import { invoke, subscribeDesktopEvent } from "./bridge";
+import type { EditorMode } from "../editor/editorMode";
 
 export interface NativeDocument {
   path: string;
@@ -57,6 +58,7 @@ export interface DesktopSettings {
   theme: ThemeMode;
   outlineVisible: boolean;
   recentFiles: string[];
+  editorMode: EditorMode;
 }
 
 export const desktop = {

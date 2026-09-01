@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const mock = vi.hoisted(() => {
   interface Options {
     value: string;
+    mode: "ir" | "sv";
     after(): void;
     input(value: string): void;
     toolbar: Array<
@@ -82,6 +83,7 @@ describe("MarkdownEditor", () => {
         <MarkdownEditor
           value=""
           theme="light"
+          mode="ir"
           dropActive={false}
           onChange={onChange}
           onChooseImages={onChooseImages}
@@ -97,6 +99,7 @@ describe("MarkdownEditor", () => {
         <MarkdownEditor
           value="# 从 Windows 打开的文档"
           theme="light"
+          mode="ir"
           dropActive={false}
           onChange={onChange}
           onChooseImages={onChooseImages}
@@ -127,6 +130,7 @@ describe("MarkdownEditor", () => {
         <MarkdownEditor
           value="# 图片测试"
           theme="light"
+          mode="ir"
           dropActive={false}
           onChange={vi.fn()}
           onChooseImages={onChooseImages}
@@ -161,6 +165,7 @@ describe("MarkdownEditor", () => {
         <MarkdownEditor
           value=""
           theme="light"
+          mode="ir"
           dropActive
           onChange={vi.fn()}
           onChooseImages={vi.fn(async () => [])}
@@ -172,5 +177,29 @@ describe("MarkdownEditor", () => {
     expect(host.querySelector(".drop-overlay")?.textContent).toContain(
       "打开 Markdown 或插入图片",
     );
+  });
+
+  it("rebuilds Vditor when the editor mode changes", async () => {
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    const common = {
+      value: "# 模式测试",
+      theme: "light" as const,
+      dropActive: false,
+      onChange: vi.fn(),
+      onChooseImages: vi.fn(async () => [] as string[]),
+      onInsertImages: vi.fn(async () => [] as string[]),
+    };
+    await act(async () => {
+      root?.render(<MarkdownEditor {...common} mode="ir" />);
+    });
+    await act(async () => {
+      root?.render(<MarkdownEditor {...common} mode="sv" />);
+    });
+    expect(mock.MockVditor.instances.map((item) => item.options.mode)).toEqual([
+      "ir",
+      "sv",
+    ]);
   });
 });

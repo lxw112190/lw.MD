@@ -161,18 +161,23 @@ void ValidateReadableMarkdown(const std::wstring& path) {
 
 void ValidateSettingsUpdate(const json& params,
                             const std::wstring& current_document_path) {
-  if (params.size() != 3U || !params.contains("theme") ||
+  if (params.size() != 4U || !params.contains("theme") ||
       !params.at("theme").is_string() ||
       !params.contains("outlineVisible") ||
       !params.at("outlineVisible").is_boolean() ||
       !params.contains("recentFiles") ||
       !params.at("recentFiles").is_array() ||
-      params.at("recentFiles").size() > 10U) {
+      params.at("recentFiles").size() > 10U ||
+      !params.contains("editorMode") || !params.at("editorMode").is_string()) {
     throw std::invalid_argument("Invalid settings");
   }
   const auto theme = params.at("theme").get<std::string>();
   if (theme != "system" && theme != "light" && theme != "dark") {
     throw std::invalid_argument("Invalid theme");
+  }
+  const auto editor_mode = params.at("editorMode").get<std::string>();
+  if (editor_mode != "ir" && editor_mode != "sv") {
+    throw std::invalid_argument("Invalid editor mode");
   }
   const auto existing = LoadSettings();
   for (const auto& item : params.at("recentFiles")) {

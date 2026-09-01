@@ -3,7 +3,6 @@ import type { ExternalFileState } from "../document/externalFileState";
 interface Props {
   state: ExternalFileState;
   dirty: boolean;
-  dismissed: boolean;
   onReload: () => void;
   onSaveAs: () => void;
   onContinue: () => void;
@@ -12,12 +11,11 @@ interface Props {
 export function ExternalFileNotice({
   state,
   dirty,
-  dismissed,
   onReload,
   onSaveAs,
   onContinue,
 }: Props) {
-  if (state.kind === "none" || dismissed) return null;
+  if (state.kind === "none") return null;
   const missing = state.kind === "missing";
   return (
     <section className="external-file-notice" role="alert">

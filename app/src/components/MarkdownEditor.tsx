@@ -3,6 +3,7 @@ import "vditor/dist/index.css";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import vditorRuntime from "../../vditor-runtime.config.json";
 import { normalizeDocumentImages } from "../markdown/documentImages";
+import type { EditorMode } from "../editor/editorMode";
 
 export interface MarkdownEditorHandle {
   focus(): void;
@@ -22,6 +23,7 @@ interface Props {
   onInsertImages(files: File[]): Promise<string[]>;
   dropActive: boolean;
   theme: "light" | "dark";
+  mode: EditorMode;
 }
 
 function applyEditorTheme(instance: Vditor, theme: "light" | "dark") {
@@ -35,7 +37,15 @@ function applyEditorTheme(instance: Vditor, theme: "light" | "dark") {
 
 export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
   function MarkdownEditor(
-    { value, onChange, onChooseImages, onInsertImages, dropActive, theme },
+    {
+      value,
+      onChange,
+      onChooseImages,
+      onInsertImages,
+      dropActive,
+      theme,
+      mode,
+    },
     ref,
   ) {
     const container = useRef<HTMLDivElement>(null);
@@ -69,7 +79,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         subtree: true,
       });
       const instance = new Vditor(container.current, {
-        mode: "ir",
+        mode,
         lang: vditorRuntime.locale as "zh_CN",
         cache: { enable: false },
         cdn: "/vditor",
@@ -154,7 +164,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         readyRef.current = false;
         editor.current = null;
       };
-    }, [onChange]);
+    }, [onChange, mode]);
     useEffect(() => {
       if (value === valueRef.current) return;
       valueRef.current = value;
@@ -196,7 +206,13 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
       getValue: () => editor.current?.getValue() ?? "",
       insertMarkdown: (nextValue) => editor.current?.insertMD(nextValue),
       revealText: (text, occurrence, matchCase) =>
-        revealTextInEditor(container.current, text, occurrence, matchCase),
+        revealTextInEditor(
+          container.current,
+          text,
+          occurrence,
+          matchCase,
+          mode,
+        ),
       redo: () => editor.current?.vditor.undo?.redo(editor.current.vditor),
       setValue: (nextValue) => {
         valueRef.current = nextValue;
@@ -205,7 +221,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
       scrollToHeading: (text, occurrence) => {
         const headings = Array.from(
           container.current?.querySelectorAll<HTMLElement>(
-            '[data-type="heading"], h1, h2, h3, h4, h5, h6',
+            '.vditor-ir [data-type="heading"], .vditor-ir h1, .vditor-ir h2, .vditor-ir h3, .vditor-ir h4, .vditor-ir h5, .vditor-ir h6, .vditor-preview [data-type="heading"], .vditor-preview h1, .vditor-preview h2, .vditor-preview h3, .vditor-preview h4, .vditor-preview h5, .vditor-preview h6',
           ) ?? [],
         );
         const exact = headings.filter(
@@ -213,7 +229,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
             (heading.textContent ?? "").replace(/^#{1,6}\s*/, "").trim() ===
             text,
         );
-        const target = headings[occurrence] ?? exact[0];
+        const target = exact[occurrence] ?? headings[occurrence] ?? exact[0];
         target?.scrollIntoView({ behavior: "smooth", block: "center" });
       },
       undo: () => editor.current?.vditor.undo?.undo(editor.current.vditor),
@@ -237,8 +253,11 @@ function revealTextInEditor(
   query: string,
   occurrence: number,
   matchCase: boolean,
+  mode: EditorMode,
 ) {
-  const root = container?.querySelector<HTMLElement>(".vditor-ir");
+  const root = container?.querySelector<HTMLElement>(
+    mode === "sv" ? ".vditor-sv" : ".vditor-ir",
+  );
   if (!root || !query) return false;
 
   const walker = window.document.createTreeWalker(root, NodeFilter.SHOW_TEXT);

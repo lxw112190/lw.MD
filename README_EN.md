@@ -15,6 +15,7 @@
 ## Features
 
 - Instant-rendering Markdown editing with Vditor IR mode
+- Instant-rendering and Source + Preview modes, with the last choice remembered
 - Offline rendering for Mermaid diagrams and inline or block KaTeX formulas
 - New, open, atomic UTF-8 save, and Save As operations
 - Find, replace, case-sensitive matching, and result navigation
@@ -128,11 +129,11 @@ Every push runs frontend checks, the Release build, and native tests. A download
 Pushing a `v*` tag that matches the project version automatically creates a GitHub Release and uploads the portable ZIP and SHA-256 checksum:
 
 ```powershell
-git tag -a v0.3.9 -m "lw.MD v0.3.9"
-git push origin v0.3.9
+git tag -a v0.4.0 -m "lw.MD v0.4.0"
+git push origin v0.4.0
 ```
 
-Tags with suffixes such as `v0.3.9-beta.1` or `v0.3.9-rc.1` are automatically published as GitHub pre-releases.
+Tags with suffixes such as `v0.4.0-beta.1` or `v0.4.0-rc.1` are automatically published as GitHub pre-releases.
 
 To debug WebView2 locally, set `LWMD_ENABLE_DEVTOOLS=1` before launching the application. Developer tools are disabled by default in production builds.
 

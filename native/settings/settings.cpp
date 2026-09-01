@@ -28,7 +28,8 @@ std::filesystem::path SettingsPath() {
 json Defaults() {
   return {{"theme", "system"},
           {"outlineVisible", true},
-          {"recentFiles", json::array()}};
+          {"recentFiles", json::array()},
+          {"editorMode", "ir"}};
 }
 
 json Normalize(const json& input) {
@@ -38,6 +39,8 @@ json Normalize(const json& input) {
     result["theme"] = theme;
   }
   result["outlineVisible"] = input.value("outlineVisible", true);
+  const auto editor_mode = input.value("editorMode", "ir");
+  result["editorMode"] = editor_mode == "sv" ? "sv" : "ir";
   if (input.contains("recentFiles") && input["recentFiles"].is_array()) {
     auto& files = result["recentFiles"];
     for (const auto& item : input["recentFiles"]) {
