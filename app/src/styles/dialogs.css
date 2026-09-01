@@ -26,6 +26,35 @@
   font-size: 12px;
 }
 
+.update-notice {
+  grid-column: 1 / -1;
+  z-index: 64;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 14px;
+  border-bottom: 1px solid #9edfc9;
+  color: #0f6b55;
+  background: #effcf7;
+  font-size: 12px;
+}
+
+.update-notice > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.update-notice button {
+  border: 1px solid #a7d8c8;
+  border-radius: 5px;
+  padding: 4px 9px;
+  background: #fff;
+  color: inherit;
+  font-size: 12px;
+}
+
 .external-file-notice > div,
 .modal-actions {
   display: flex;

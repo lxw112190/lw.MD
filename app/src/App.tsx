@@ -18,6 +18,8 @@ import {
 import { OutlinePanel } from "./components/OutlinePanel";
 import { RecoveryDialog } from "./components/RecoveryDialog";
 import { WindowsIntegrationDialog } from "./components/WindowsIntegrationDialog";
+import { UpdateNotice } from "./components/UpdateNotice";
+import packageInfo from "../package.json";
 import {
   desktop,
   type DesktopSettings,
@@ -43,6 +45,11 @@ import { getMarkdownOutline } from "./markdown/outline";
 import { createDocumentMarkdownOptions } from "./markdown/vditorMarkdown";
 import { waitForPrintAssets } from "./pdf/printAssets";
 import { editorModeLabel } from "./editor/editorMode";
+import {
+  checkForUpdate,
+  latestReleaseUrl,
+  type UpdateInfo,
+} from "./update/updateService";
 
 const recoveryIntervalMs = 15_000;
 const recoveryDebounceMs = 1_500;
@@ -75,6 +82,9 @@ export default function App() {
     { kind: "none" },
   );
   const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
+  const [availableUpdate, setAvailableUpdate] = useState<UpdateInfo | null>(
+    null,
+  );
   const editor = useRef<MarkdownEditorHandle>(null);
   const printDocument = useRef<HTMLDivElement>(null);
   const documentRef = useRef(document);
@@ -434,6 +444,29 @@ export default function App() {
     };
   }, [acceptDocument]);
   useEffect(() => {
+    if (!bootReady) return;
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void checkForUpdate(packageInfo.version)
+        .then((update) => {
+          if (!cancelled && update) setAvailableUpdate(update);
+        })
+        .catch(() => undefined);
+    }, 5_000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [bootReady]);
+  const openUpdate = useCallback(async () => {
+    try {
+      await desktop.app.openExternal(latestReleaseUrl);
+      setAvailableUpdate(null);
+    } catch (error) {
+      setStatus(errorMessage(error));
+    }
+  }, []);
+  useEffect(() => {
     if (!recoveryReady) return;
     if (!hasPersistenceRisk) {
       lastRecoverySnapshot.current = null;
@@ -751,6 +784,13 @@ export default function App() {
           </button>
         </div>
       </header>
+      {availableUpdate && (
+        <UpdateNotice
+          version={availableUpdate.latestVersion}
+          onOpen={() => void openUpdate()}
+          onDismiss={() => setAvailableUpdate(null)}
+        />
+      )}
       <ExternalFileNotice
         state={externalFileState}
         dirty={document.dirty}

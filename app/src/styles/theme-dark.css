@@ -198,6 +198,18 @@
   background: #332d1a;
 }
 
+:root[data-theme="dark"] .update-notice {
+  border-color: #236b59;
+  color: #99f6e4;
+  background: #142b26;
+}
+
+:root[data-theme="dark"] .update-notice button {
+  border-color: #3d7465;
+  color: #d6d3d1;
+  background: #242424;
+}
+
 :root[data-theme="dark"] .external-file-notice button,
 :root[data-theme="dark"] .modal-actions button {
   border-color: #525252;
