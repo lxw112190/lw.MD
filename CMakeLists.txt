@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(lw_MD VERSION 0.4.1 LANGUAGES CXX)
+project(lw_MD VERSION 0.4.2 LANGUAGES CXX)
 
 if(NOT WIN32 OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
   message(FATAL_ERROR "lw.MD supports Windows x64 only")

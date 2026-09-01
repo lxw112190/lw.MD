@@ -129,11 +129,11 @@ Every push runs frontend checks, the Release build, and native tests. A download
 Pushing a `v*` tag that matches the project version automatically creates a GitHub Release and uploads the portable ZIP and SHA-256 checksum:
 
 ```powershell
-git tag -a v0.4.1 -m "lw.MD v0.4.1"
-git push origin v0.4.1
+git tag -a v0.4.2 -m "lw.MD v0.4.2"
+git push origin v0.4.2
 ```
 
-Tags with suffixes such as `v0.4.1-beta.1` or `v0.4.1-rc.1` are automatically published as GitHub pre-releases.
+Tags with suffixes such as `v0.4.2-beta.1` or `v0.4.2-rc.1` are automatically published as GitHub pre-releases.
 
 To debug WebView2 locally, set `LWMD_ENABLE_DEVTOOLS=1` before launching the application. Developer tools are disabled by default in production builds.
 
