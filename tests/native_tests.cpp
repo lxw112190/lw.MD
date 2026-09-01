@@ -4,6 +4,7 @@
 #include "common/dpi_window.h"
 #include "dragdrop/file_drop_target.h"
 #include "filesystem/file_service.h"
+#include "filesystem/file_revision.h"
 #include "images/image_service.h"
 #include "recovery/recovery_service.h"
 #include "resources/frontend_cache.h"
@@ -220,8 +221,27 @@ int main() {
     return association_result;
   }
   if (ReadUtf8File(file.wstring()) != first) return 2;
+  const auto first_revision = GetFileRevision(file.wstring());
+  if (first_revision.size != first.size() ||
+      FileRevisionHashHex(first_revision).size() != 64U) {
+    return 44;
+  }
   WriteUtf8FileAtomically(file.wstring(), second);
   if (ReadUtf8File(file.wstring()) != second) return 3;
+  bool conflict_detected = false;
+  try {
+    SaveUtf8FileChecked(file.wstring(), "must not overwrite", first_revision);
+  } catch (const std::runtime_error& error) {
+    conflict_detected = std::string(error.what()) == "FILE_CONFLICT";
+  }
+  if (!conflict_detected || ReadUtf8File(file.wstring()) != second) return 45;
+  const auto second_revision = GetFileRevision(file.wstring());
+  const auto checked_revision =
+      SaveUtf8FileChecked(file.wstring(), "checked save", second_revision);
+  if (!SameFileContent(checked_revision, GetFileRevision(file.wstring())) ||
+      ReadUtf8File(file.wstring()) != "checked save") {
+    return 46;
+  }
   if (std::filesystem::exists(file.wstring() + L".lw-md.tmp")) return 4;
   const auto writable_attributes = GetFileAttributesW(file.c_str());
   if (writable_attributes == INVALID_FILE_ATTRIBUTES ||

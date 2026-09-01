@@ -22,6 +22,7 @@
 - 自动管理 Markdown 同目录下的 `assets` 图片目录
 - 文档大纲、最近文件、浅色、深色及跟随系统主题
 - 定时恢复快照，异常退出后可恢复未保存内容
+- 文件外部修改检测、受保护保存和冲突处理，避免覆盖他人修改
 - A4 PDF 导出
 - 窗口位置、尺寸和最大化状态记忆
 - Windows 高 DPI 与混合缩放多显示器适配
@@ -127,11 +128,11 @@ build\Release\lw.MD.exe
 推送与项目版本一致的 `v*` 标签后，CI 会自动创建 GitHub Release，并上传便携 ZIP 和 SHA-256 校验文件：
 
 ```powershell
-git tag -a v0.3.8 -m "lw.MD v0.3.8"
-git push origin v0.3.8
+git tag -a v0.3.9 -m "lw.MD v0.3.9"
+git push origin v0.3.9
 ```
 
-使用 `v0.3.8-beta.1`、`v0.3.8-rc.1` 等带后缀的标签时，会自动发布为 GitHub Pre-release。
+使用 `v0.3.9-beta.1`、`v0.3.9-rc.1` 等带后缀的标签时，会自动发布为 GitHub Pre-release。
 
 如需本地调试 WebView2，可在启动前设置 `LWMD_ENABLE_DEVTOOLS=1`；正式构建默认禁用开发者工具。
 

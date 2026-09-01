@@ -1,3 +1,5 @@
+import type { FileRevision } from "../desktop/desktop";
+
 export interface DocumentState {
   path: string | null;
   name: string;
@@ -5,6 +7,7 @@ export interface DocumentState {
   savedContent: string;
   dirty: boolean;
   encoding: "utf-8";
+  revision: FileRevision | null;
 }
 
 export function createUntitledDocument(): DocumentState {
@@ -15,6 +18,7 @@ export function createUntitledDocument(): DocumentState {
     savedContent: "",
     dirty: false,
     encoding: "utf-8",
+    revision: null,
   };
 }
 
@@ -29,6 +33,7 @@ export function markDocumentSaved(
   document: DocumentState,
   path = document.path,
   name = document.name,
+  revision: FileRevision | null = document.revision,
 ): DocumentState {
   return {
     ...document,
@@ -36,5 +41,6 @@ export function markDocumentSaved(
     name,
     savedContent: document.content,
     dirty: false,
+    revision,
   };
 }

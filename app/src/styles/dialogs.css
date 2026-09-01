@@ -13,6 +13,71 @@
   box-shadow: 0 14px 40px rgb(28 25 23 / 18%);
 }
 
+.external-file-notice {
+  z-index: 65;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 14px;
+  border-bottom: 1px solid #f0b429;
+  color: #7c4a03;
+  background: #fff8df;
+  font-size: 12px;
+}
+
+.external-file-notice > div,
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.external-file-notice button,
+.modal-actions button {
+  border: 1px solid #d6d3d1;
+  border-radius: 5px;
+  padding: 4px 9px;
+  background: #fff;
+  color: inherit;
+  font-size: 12px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  z-index: 130;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(28 25 23 / 46%);
+}
+
+.modal-dialog {
+  width: min(460px, 100%);
+  padding: 22px;
+  border: 1px solid #e7e5e4;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgb(28 25 23 / 26%);
+}
+
+.modal-dialog h2 {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+
+.modal-dialog p {
+  margin: 0 0 18px;
+  color: #57534e;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.modal-actions {
+  justify-content: flex-end;
+}
+
 .find-row {
   display: flex;
   align-items: center;

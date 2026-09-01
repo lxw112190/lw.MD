@@ -12,3 +12,12 @@ export function isDesktopUnavailable(error: unknown) {
     error.code === "DESKTOP_UNAVAILABLE"
   );
 }
+
+export function isBridgeErrorCode(error: unknown, code: string) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === code
+  );
+}

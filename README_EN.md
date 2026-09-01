@@ -22,6 +22,7 @@
 - Automatic management of the `assets` image directory beside each document
 - Document outline, recent files, and light, dark, or system-following themes
 - Periodic recovery snapshots for restoring unsaved work after an unexpected exit
+- External-change detection, protected saves, and conflict handling to prevent overwriting edits
 - A4 PDF export
 - Persistent window position, size, and maximized state
 - Windows high-DPI and mixed-scaling multi-monitor support
@@ -127,11 +128,11 @@ Every push runs frontend checks, the Release build, and native tests. A download
 Pushing a `v*` tag that matches the project version automatically creates a GitHub Release and uploads the portable ZIP and SHA-256 checksum:
 
 ```powershell
-git tag -a v0.3.8 -m "lw.MD v0.3.8"
-git push origin v0.3.8
+git tag -a v0.3.9 -m "lw.MD v0.3.9"
+git push origin v0.3.9
 ```
 
-Tags with suffixes such as `v0.3.8-beta.1` or `v0.3.8-rc.1` are automatically published as GitHub pre-releases.
+Tags with suffixes such as `v0.3.9-beta.1` or `v0.3.9-rc.1` are automatically published as GitHub pre-releases.
 
 To debug WebView2 locally, set `LWMD_ENABLE_DEVTOOLS=1` before launching the application. Developer tools are disabled by default in production builds.
 

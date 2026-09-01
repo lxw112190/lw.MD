@@ -52,3 +52,18 @@ void WriteUtf8FileAtomically(const std::wstring& path, const std::string& conten
     SetFileAttributesW(target.c_str(), original_attributes);
   }
 }
+
+FileRevision SaveUtf8FileChecked(const std::wstring& path,
+                                 const std::string& content,
+                                 const FileRevision& expected_revision) {
+  std::error_code error;
+  if (!std::filesystem::is_regular_file(path, error) || error) {
+    throw std::runtime_error("FILE_MISSING");
+  }
+  const auto current = GetFileRevision(path);
+  if (!SameFileContent(current, expected_revision)) {
+    throw std::runtime_error("FILE_CONFLICT");
+  }
+  WriteUtf8FileAtomically(path, content);
+  return GetFileRevision(path);
+}

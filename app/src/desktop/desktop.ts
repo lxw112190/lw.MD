@@ -4,10 +4,21 @@ export interface NativeDocument {
   path: string;
   name: string;
   content: string;
+  revision: FileRevision;
+}
+export interface FileRevision {
+  size: number;
+  lastWriteTime: string;
+  sha256: string;
+}
+export interface FileCheckResult {
+  state: "unchanged" | "changed" | "missing";
+  revision?: FileRevision;
 }
 export interface SaveResult {
   path: string;
   name: string;
+  revision: FileRevision;
 }
 export interface PdfExportResult {
   path: string;
@@ -64,8 +75,10 @@ export const desktop = {
     getLaunch: () => invoke<NativeDocument | null>("file.getLaunch"),
     open: () => invoke<NativeDocument | null>("file.open"),
     read: (path: string) => invoke<NativeDocument>("file.read", { path }),
-    save: (path: string, content: string) =>
-      invoke<SaveResult>("file.save", { path, content }),
+    save: (path: string, content: string, expectedRevision: FileRevision) =>
+      invoke<SaveResult>("file.save", { path, content, expectedRevision }),
+    checkRevision: (path: string, expectedRevision: FileRevision) =>
+      invoke<FileCheckResult>("file.checkRevision", { path, expectedRevision }),
     saveAs: (content: string, suggestedName: string) =>
       invoke<SaveResult | null>("file.saveAs", { content, suggestedName }),
   },

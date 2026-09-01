@@ -223,6 +223,54 @@ json RecoveryJson(const RecoverySnapshot& snapshot) {
           {"content", snapshot.content},
           {"savedAt", snapshot.saved_at}};
 }
+
+json RevisionJson(const FileRevision& revision) {
+  return {{"size", revision.size},
+          {"lastWriteTime", std::to_string(revision.last_write_time)},
+          {"sha256", FileRevisionHashHex(revision)}};
+}
+
+FileRevision ParseRevision(const json& value) {
+  if (!value.is_object() || value.size() != 3U ||
+      !value.contains("size") || !value.at("size").is_number_unsigned() ||
+      !value.contains("lastWriteTime") ||
+      !value.at("lastWriteTime").is_string() ||
+      !value.contains("sha256") || !value.at("sha256").is_string()) {
+    throw std::invalid_argument("Invalid file revision");
+  }
+  const auto size = value.at("size").get<std::uint64_t>();
+  const auto time_text = value.at("lastWriteTime").get<std::string>();
+  const auto hash = value.at("sha256").get<std::string>();
+  if (time_text.empty() || time_text.size() > 20U || hash.size() != 64U ||
+      !std::all_of(time_text.begin(), time_text.end(),
+                   [](const char c) { return c >= '0' && c <= '9'; }) ||
+      !std::all_of(hash.begin(), hash.end(), [](const char c) {
+        return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
+      })) {
+    throw std::invalid_argument("Invalid file revision");
+  }
+  FileRevision revision{};
+  revision.size = size;
+  revision.last_write_time = std::stoull(time_text);
+  for (std::size_t index = 0; index < revision.sha256.size(); ++index) {
+    revision.sha256[index] = static_cast<std::uint8_t>(
+        std::stoul(hash.substr(index * 2U, 2U), nullptr, 16));
+  }
+  return revision;
+}
+
+json DocumentJson(const std::wstring& path, std::string content) {
+  FileRevision revision{};
+  try {
+    revision = GetFileRevision(path);
+  } catch (...) {
+    throw std::runtime_error("FILE_REVISION_FAILED");
+  }
+  return {{"path", WideToUtf8(path)},
+          {"name", WideToUtf8(fs::path(path).filename().wstring())},
+          {"content", std::move(content)},
+          {"revision", RevisionJson(revision)}};
+}
 }  // namespace
 
 void BridgeDispatcher::SetCurrentDocumentPath(const std::wstring& path) {
@@ -499,11 +547,7 @@ void BridgeDispatcher::Dispatch(const std::string& raw, Reply reply) {
       const auto content = ReadUtf8File(path);
       dropped_file_grants_.clear();
       SetCurrentDocumentPath(path);
-      reply(Success(id,
-                    {{"path", WideToUtf8(path)},
-                     {"name", WideToUtf8(fs::path(path).filename().wstring())},
-                     {"content", content}})
-                .dump());
+      reply(Success(id, DocumentJson(path, content)).dump());
       return;
     }
     if (method == "file.getLaunch") {
@@ -521,11 +565,7 @@ void BridgeDispatcher::Dispatch(const std::string& raw, Reply reply) {
       const auto content = ReadUtf8File(path);
       launch_document_path_.clear();
       SetCurrentDocumentPath(path);
-      reply(Success(id,
-                    {{"path", WideToUtf8(path)},
-                     {"name", WideToUtf8(fs::path(path).filename().wstring())},
-                     {"content", std::move(content)}})
-                .dump());
+      reply(Success(id, DocumentJson(path, content)).dump());
       return;
     }
     if (method == "file.clearCurrent") {
@@ -541,11 +581,7 @@ void BridgeDispatcher::Dispatch(const std::string& raw, Reply reply) {
       }
       ValidateReadableMarkdown(*path);
       SetCurrentDocumentPath(*path);
-      reply(Success(id,
-                    {{"path", WideToUtf8(*path)},
-                     {"name", WideToUtf8(fs::path(*path).filename().wstring())},
-                     {"content", ReadUtf8File(*path)}})
-                .dump());
+      reply(Success(id, DocumentJson(*path, ReadUtf8File(*path))).dump());
       return;
     }
     if (method == "file.read") {
@@ -558,18 +594,55 @@ void BridgeDispatcher::Dispatch(const std::string& raw, Reply reply) {
         return;
       }
       SetCurrentDocumentPath(path);
-      reply(Success(id,
-                    {{"path", WideToUtf8(path)},
-                     {"name", WideToUtf8(fs::path(path).filename().wstring())},
-                     {"content", ReadUtf8File(path)}})
+      reply(Success(id, DocumentJson(path, ReadUtf8File(path))).dump());
+      return;
+    }
+    if (method == "file.checkRevision") {
+      if (params.size() != 2U || !params.contains("path") ||
+          !params.contains("expectedRevision")) {
+        reply(Error(id, "BRIDGE_INVALID_PARAMS", "Invalid revision parameters")
+                  .dump());
+        return;
+      }
+      const auto path =
+          Utf8ToWide(RequireString(params, "path", kMaxPathBytes));
+      if (!IsAbsoluteMarkdownPath(path) ||
+          (!SamePath(path, current_document_path_) && !IsRecentPath(path))) {
+        reply(Error(id, "FILE_ACCESS_DENIED", "Markdown path is not authorized")
+                  .dump());
+        return;
+      }
+      const auto expected = ParseRevision(params.at("expectedRevision"));
+      std::error_code error;
+      if (!fs::is_regular_file(path, error) || error) {
+        reply(Success(id, {{"state", "missing"}}).dump());
+        return;
+      }
+      FileRevision current{};
+      try {
+        current = GetFileRevision(path);
+      } catch (...) {
+        reply(Error(id, "FILE_REVISION_FAILED", "Unable to inspect file revision")
+                  .dump());
+        return;
+      }
+      reply(Success(id, {{"state", SameFileContent(current, expected)
+                                      ? "unchanged"
+                                      : "changed"},
+                        {"revision", RevisionJson(current)}})
                 .dump());
       return;
     }
     if (method == "file.save" || method == "file.saveAs") {
-      const auto content =
-          RequireString(params, "content", kMaxMarkdownBytes, true);
+      const auto content = RequireString(params, "content", kMaxMarkdownBytes, true);
       std::optional<std::wstring> path;
+      std::optional<FileRevision> expected_revision;
       if (method == "file.save") {
+        if (params.size() != 3U || !params.contains("expectedRevision")) {
+          reply(Error(id, "BRIDGE_INVALID_PARAMS", "Invalid save parameters")
+                    .dump());
+          return;
+        }
         const auto requested =
             Utf8ToWide(RequireString(params, "path", kMaxPathBytes));
         if (!IsAbsoluteMarkdownPath(requested) ||
@@ -579,6 +652,7 @@ void BridgeDispatcher::Dispatch(const std::string& raw, Reply reply) {
           return;
         }
         path = requested;
+        expected_revision = ParseRevision(params.at("expectedRevision"));
       } else {
         const auto suggested =
             Utf8ToWide(RequireString(params, "suggestedName", 1020U));
@@ -598,11 +672,39 @@ void BridgeDispatcher::Dispatch(const std::string& raw, Reply reply) {
         reply(Error(id, "INVALID_FILE_PATH", "Invalid Markdown file path").dump());
         return;
       }
-      WriteUtf8FileAtomically(*path, content);
+      FileRevision revision{};
+      if (method == "file.save") {
+        try {
+          revision = SaveUtf8FileChecked(*path, content, *expected_revision);
+        } catch (const std::runtime_error& error) {
+          const std::string message = error.what();
+          if (message == "FILE_MISSING") {
+            reply(Error(id, "FILE_MISSING", "The original Markdown file is missing")
+                      .dump());
+          } else if (message == "FILE_CONFLICT") {
+            reply(Error(id, "FILE_CONFLICT", "The Markdown file changed externally")
+                      .dump());
+          } else {
+            reply(Error(id, "FILE_REVISION_FAILED", "Unable to verify file revision")
+                      .dump());
+          }
+          return;
+        }
+      } else {
+        WriteUtf8FileAtomically(*path, content);
+        try {
+          revision = GetFileRevision(*path);
+        } catch (...) {
+          reply(Error(id, "FILE_REVISION_FAILED", "Unable to verify saved file")
+                    .dump());
+          return;
+        }
+      }
       SetCurrentDocumentPath(*path);
       reply(Success(id,
                     {{"path", WideToUtf8(*path)},
-                     {"name", WideToUtf8(fs::path(*path).filename().wstring())}})
+                     {"name", WideToUtf8(fs::path(*path).filename().wstring())},
+                     {"revision", RevisionJson(revision)}})
                 .dump());
       return;
     }
@@ -714,6 +816,12 @@ void BridgeDispatcher::Dispatch(const std::string& raw, Reply reply) {
     }
     reply(Error(id, "BRIDGE_UNKNOWN_METHOD", "Unknown desktop method").dump());
   } catch (const std::exception& error) {
-    reply(Error(id, "BRIDGE_OPERATION_FAILED", error.what()).dump());
+    const std::string message = error.what();
+    if (message == "FILE_REVISION_FAILED") {
+      reply(Error(id, "FILE_REVISION_FAILED", "Unable to inspect file revision")
+                .dump());
+    } else {
+      reply(Error(id, "BRIDGE_OPERATION_FAILED", error.what()).dump());
+    }
   }
 }

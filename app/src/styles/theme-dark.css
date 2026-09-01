@@ -185,6 +185,32 @@
   box-shadow: 0 14px 40px rgb(0 0 0 / 42%);
 }
 
+:root[data-theme="dark"] .external-file-notice {
+  border-color: #8a6a20;
+  color: #f8d477;
+  background: #332d1a;
+}
+
+:root[data-theme="dark"] .external-file-notice button,
+:root[data-theme="dark"] .modal-actions button {
+  border-color: #525252;
+  color: #e7e5e4;
+  background: #242424;
+}
+
+:root[data-theme="dark"] .modal-dialog {
+  border-color: #404040;
+  background: #242424;
+}
+
+:root[data-theme="dark"] .modal-dialog h2 {
+  color: #f5f5f4;
+}
+
+:root[data-theme="dark"] .modal-dialog p {
+  color: #a8a29e;
+}
+
 :root[data-theme="dark"] .find-row > input {
   border-color: #525252;
   color: #f5f5f4;

@@ -8,6 +8,8 @@ import {
   useState,
 } from "react";
 import { AboutDialog } from "./components/AboutDialog";
+import { ExternalFileNotice } from "./components/ExternalFileNotice";
+import { FileConflictDialog } from "./components/FileConflictDialog";
 import { FindReplacePanel } from "./components/FindReplacePanel";
 import {
   MarkdownEditor,
@@ -24,13 +26,18 @@ import {
   type SavedImage,
   type ThemeMode,
 } from "./desktop/desktop";
-import { errorMessage, isDesktopUnavailable } from "./desktop/errors";
+import {
+  errorMessage,
+  isBridgeErrorCode,
+  isDesktopUnavailable,
+} from "./desktop/errors";
 import {
   createUntitledDocument,
   markDocumentSaved,
   updateDocumentContent,
   type DocumentState,
 } from "./document/documentModel";
+import type { ExternalFileState } from "./document/externalFileState";
 import { addRecentFile, fileNameFromPath } from "./document/recentFiles";
 import { getMarkdownOutline } from "./markdown/outline";
 import { waitForPrintAssets } from "./pdf/printAssets";
@@ -61,9 +68,15 @@ export default function App() {
   const [pendingRecovery, setPendingRecovery] =
     useState<RecoverySnapshot | null>(null);
   const [recoveryReady, setRecoveryReady] = useState(false);
+  const [externalFileState, setExternalFileState] = useState<ExternalFileState>(
+    { kind: "none" },
+  );
+  const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
+  const [externalNoticeDismissed, setExternalNoticeDismissed] = useState(false);
   const editor = useRef<MarkdownEditorHandle>(null);
   const printDocument = useRef<HTMLDivElement>(null);
   const documentRef = useRef(document);
+  const externalFileStateRef = useRef(externalFileState);
   const lastRecoverySnapshot = useRef<{
     path: string | null;
     name: string;
@@ -75,6 +88,8 @@ export default function App() {
     [deferredOutlineContent],
   );
   const title = `${document.name}${document.dirty ? " *" : ""} — lw.MD`;
+  const hasPersistenceRisk =
+    document.dirty || externalFileState.kind !== "none";
   const acceptDocument = useCallback(
     (result: NativeDocument, clearRecovery = true) => {
       if (clearRecovery) {
@@ -86,7 +101,10 @@ export default function App() {
         savedContent: result.content,
         dirty: false,
         encoding: "utf-8",
+        revision: result.revision,
       });
+      setExternalFileState({ kind: "none" });
+      setExternalNoticeDismissed(false);
       setSettings((current) => ({
         ...current,
         recentFiles: addRecentFile(current.recentFiles, result.path),
@@ -99,8 +117,9 @@ export default function App() {
   }, []);
   const confirmDiscard = useCallback(
     () =>
-      !document.dirty || window.confirm("当前文档尚未保存，确定放弃修改吗？"),
-    [document.dirty],
+      !hasPersistenceRisk ||
+      window.confirm("当前文档或磁盘文件存在未处理修改，确定放弃吗？"),
+    [hasPersistenceRisk],
   );
   const createNew = useCallback(() => {
     if (!confirmDiscard()) return;
@@ -108,6 +127,8 @@ export default function App() {
     lastRecoverySnapshot.current = null;
     void desktop.file.clearCurrent().catch(() => undefined);
     setDocument(createUntitledDocument());
+    setExternalFileState({ kind: "none" });
+    setExternalNoticeDismissed(false);
     setStatus("新建文档");
   }, [confirmDiscard]);
   const open = useCallback(async () => {
@@ -143,7 +164,16 @@ export default function App() {
       try {
         const result =
           !saveAs && document.path
-            ? await desktop.file.save(document.path, document.content)
+            ? document.revision
+              ? await desktop.file.save(
+                  document.path,
+                  document.content,
+                  document.revision,
+                )
+              : await desktop.file.saveAs(
+                  document.content,
+                  document.name === "未命名" ? "未命名.md" : document.name,
+                )
             : await desktop.file.saveAs(
                 document.content,
                 document.name === "未命名" ? "未命名.md" : document.name,
@@ -152,8 +182,15 @@ export default function App() {
           void desktop.recovery.clear().catch(() => undefined);
           lastRecoverySnapshot.current = null;
           setDocument((current) =>
-            markDocumentSaved(current, result.path, result.name),
+            markDocumentSaved(
+              current,
+              result.path,
+              result.name,
+              result.revision,
+            ),
           );
+          setExternalFileState({ kind: "none" });
+          setExternalNoticeDismissed(false);
           setSettings((current) => ({
             ...current,
             recentFiles: addRecentFile(current.recentFiles, result.path),
@@ -161,11 +198,38 @@ export default function App() {
           setStatus("已保存");
         }
       } catch (error) {
+        if (isBridgeErrorCode(error, "FILE_CONFLICT")) {
+          setExternalFileState((current) =>
+            current.kind === "changed"
+              ? current
+              : { kind: "changed", observedRevision: document.revision! },
+          );
+          setConflictDialogOpen(true);
+        } else if (isBridgeErrorCode(error, "FILE_MISSING")) {
+          setExternalFileState({ kind: "missing" });
+          setConflictDialogOpen(true);
+        }
         setStatus(errorMessage(error));
       }
     },
     [document],
   );
+  const reloadFromDisk = useCallback(async () => {
+    const path = documentRef.current.path;
+    if (!path) return;
+    try {
+      acceptDocument(await desktop.file.read(path));
+      setConflictDialogOpen(false);
+      setStatus("已从磁盘重新加载");
+    } catch (error) {
+      setStatus(errorMessage(error));
+    }
+  }, [acceptDocument]);
+  const continueWithCurrentContent = useCallback(() => {
+    setExternalNoticeDismissed(true);
+    setConflictDialogOpen(false);
+    setStatus("继续编辑当前内容；保存前请先处理文件冲突");
+  }, []);
   const exportPdf = useCallback(async () => {
     const target = printDocument.current;
     if (!target || exportingPdf) return;
@@ -238,7 +302,7 @@ export default function App() {
   }, [document.path]);
   const persistRecoverySnapshot = useCallback(() => {
     const current = documentRef.current;
-    if (!current.dirty) return;
+    if (!current.dirty && externalFileStateRef.current.kind === "none") return;
     const previous = lastRecoverySnapshot.current;
     if (
       previous?.path === current.path &&
@@ -277,7 +341,10 @@ export default function App() {
         savedContent: `${snapshot.content}\0`,
         dirty: true,
         encoding: "utf-8",
+        revision: null,
       });
+      setExternalFileState({ kind: "none" });
+      setExternalNoticeDismissed(false);
       setPendingRecovery(null);
       setRecoveryReady(true);
       setStatus("已恢复上次未保存的内容，请确认后保存");
@@ -300,6 +367,9 @@ export default function App() {
   useEffect(() => {
     documentRef.current = document;
   }, [document]);
+  useEffect(() => {
+    externalFileStateRef.current = externalFileState;
+  }, [externalFileState]);
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -340,7 +410,7 @@ export default function App() {
   }, [acceptDocument]);
   useEffect(() => {
     if (!recoveryReady) return;
-    if (!document.dirty) {
+    if (!hasPersistenceRisk) {
       lastRecoverySnapshot.current = null;
       void desktop.recovery.clear().catch(() => undefined);
       return;
@@ -353,6 +423,8 @@ export default function App() {
   }, [
     document.content,
     document.dirty,
+    externalFileState.kind,
+    hasPersistenceRisk,
     document.name,
     document.path,
     persistRecoverySnapshot,
@@ -424,8 +496,58 @@ export default function App() {
     void desktop.app.setSettings(settings).catch(() => undefined);
   }, [settings, settingsReady]);
   useEffect(() => {
-    void desktop.app.setDirty(document.dirty).catch(() => undefined);
-  }, [document.dirty]);
+    void desktop.app.setDirty(hasPersistenceRisk).catch(() => undefined);
+  }, [hasPersistenceRisk]);
+  useEffect(() => {
+    let cancelled = false;
+    let timer: number | undefined;
+    const check = async () => {
+      const current = documentRef.current;
+      if (current.path && current.revision) {
+        const checkedPath = current.path;
+        const checkedHash = current.revision.sha256;
+        try {
+          const result = await desktop.file.checkRevision(
+            checkedPath,
+            current.revision,
+          );
+          const latest = documentRef.current;
+          if (
+            !cancelled &&
+            latest.path === checkedPath &&
+            latest.revision?.sha256 === checkedHash
+          ) {
+            if (result.state === "missing") {
+              setExternalFileState({ kind: "missing" });
+              setExternalNoticeDismissed(false);
+            } else if (result.state === "changed" && result.revision) {
+              setExternalFileState({
+                kind: "changed",
+                observedRevision: result.revision,
+              });
+              setExternalNoticeDismissed(false);
+            } else if (result.revision) {
+              setExternalFileState({ kind: "none" });
+              setDocument((previous) =>
+                previous.path === checkedPath &&
+                previous.revision?.sha256 === checkedHash
+                  ? { ...previous, revision: result.revision ?? null }
+                  : previous,
+              );
+            }
+          }
+        } catch {
+          // A transient read failure should not make the editor lose content.
+        }
+      }
+      if (!cancelled) timer = window.setTimeout(check, 3000);
+    };
+    timer = window.setTimeout(check, 3000);
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [document.path, document.revision?.sha256]);
   useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => {
@@ -588,6 +710,14 @@ export default function App() {
           </button>
         </div>
       </header>
+      <ExternalFileNotice
+        state={externalFileState}
+        dirty={document.dirty}
+        dismissed={externalNoticeDismissed}
+        onReload={() => void reloadFromDisk()}
+        onSaveAs={() => void save(true)}
+        onContinue={continueWithCurrentContent}
+      />
       {findMode && (
         <FindReplacePanel
           content={document.content}
@@ -640,6 +770,17 @@ export default function App() {
         <WindowsIntegrationDialog
           onClose={() => setAssociationOpen(false)}
           onStatus={setStatus}
+        />
+      )}
+      {conflictDialogOpen && (
+        <FileConflictDialog
+          state={externalFileState}
+          onReload={() => void reloadFromDisk()}
+          onSaveAs={() => {
+            setConflictDialogOpen(false);
+            void save(true);
+          }}
+          onContinue={continueWithCurrentContent}
         />
       )}
       <article
