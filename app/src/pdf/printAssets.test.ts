@@ -24,10 +24,10 @@ describe("PDF print assets", () => {
     setImageState(image, { complete: true, width: 400, height: 200 });
     image.decode = vi.fn(async () => undefined);
 
-    await waitForPrintAssets(target);
+    await waitForPrintAssets(target, "print-doc");
 
     expect(image.getAttribute("src")).toBe(
-      "https://document.lwmd/resources/logo.png",
+      "https://document.lwmd/resources/logo.png?lwmdScope=print-doc",
     );
     expect(image.decode).toHaveBeenCalledOnce();
     vi.unstubAllGlobals();
@@ -42,7 +42,7 @@ describe("PDF print assets", () => {
       height: 0,
     });
 
-    await expect(waitForPrintAssets(target)).rejects.toThrow(
+    await expect(waitForPrintAssets(target, "print-doc")).rejects.toThrow(
       "图片无法载入，已取消导出 PDF",
     );
   });

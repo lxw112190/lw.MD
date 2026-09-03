@@ -25,6 +25,7 @@ interface Props {
   dropActive: boolean;
   theme: "light" | "dark";
   mode: EditorMode;
+  resourceScope: string;
 }
 
 function applyEditorTheme(instance: Vditor, theme: "light" | "dark") {
@@ -46,6 +47,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
       dropActive,
       theme,
       mode,
+      resourceScope,
     },
     ref,
   ) {
@@ -54,9 +56,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     const valueRef = useRef(value);
     const readyRef = useRef(false);
     const themeRef = useRef(theme);
+    const resourceScopeRef = useRef(resourceScope);
     const onChooseImagesRef = useRef(onChooseImages);
     const scheduleImageScanRef = useRef<() => void>(() => undefined);
     themeRef.current = theme;
+    resourceScopeRef.current = resourceScope;
     onChooseImagesRef.current = onChooseImages;
     useEffect(() => {
       if (!container.current) return;
@@ -66,7 +70,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         if (imageScanFrame !== null) return;
         imageScanFrame = window.requestAnimationFrame(() => {
           imageScanFrame = null;
-          normalizeDocumentImages(editorContainer);
+          normalizeDocumentImages(editorContainer, resourceScopeRef.current);
         });
       };
       scheduleImageScanRef.current = scheduleImageScan;
@@ -174,6 +178,10 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         scheduleImageScanRef.current();
       }
     }, [value]);
+
+    useEffect(() => {
+      scheduleImageScanRef.current();
+    }, [resourceScope]);
 
     useEffect(() => {
       if (!readyRef.current) return;

@@ -94,6 +94,7 @@ describe("MarkdownEditor", () => {
           onChange={onChange}
           onChooseImages={onChooseImages}
           onInsertImages={onInsertImages}
+          resourceScope="test-document"
         />,
       );
     });
@@ -110,6 +111,7 @@ describe("MarkdownEditor", () => {
           onChange={onChange}
           onChooseImages={onChooseImages}
           onInsertImages={onInsertImages}
+          resourceScope="test-document"
         />,
       );
     });
@@ -136,6 +138,7 @@ describe("MarkdownEditor", () => {
       onChange: vi.fn(),
       onChooseImages: vi.fn(async () => [] as string[]),
       onInsertImages: vi.fn(async () => [] as string[]),
+      resourceScope: "test-document",
     };
 
     await act(async () => {
@@ -171,6 +174,7 @@ describe("MarkdownEditor", () => {
           onChange={vi.fn()}
           onChooseImages={onChooseImages}
           onInsertImages={vi.fn(async () => [])}
+          resourceScope="test-document"
         />,
       );
     });
@@ -206,6 +210,7 @@ describe("MarkdownEditor", () => {
           onChange={vi.fn()}
           onChooseImages={vi.fn(async () => [])}
           onInsertImages={vi.fn(async () => [])}
+          resourceScope="test-document"
         />,
       );
     });
@@ -226,6 +231,7 @@ describe("MarkdownEditor", () => {
       onChange: vi.fn(),
       onChooseImages: vi.fn(async () => [] as string[]),
       onInsertImages: vi.fn(async () => [] as string[]),
+      resourceScope: "test-document",
     };
     await act(async () => {
       root?.render(<MarkdownEditor {...common} mode="ir" />);

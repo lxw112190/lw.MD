@@ -52,17 +52,18 @@ CI-generated executables are not commercially code-signed, so Windows SmartScree
 
 ## Keyboard Shortcuts
 
-| Action | Shortcut |
-| --- | --- |
-| New | `Ctrl+N` |
-| Open | `Ctrl+O` |
-| Save | `Ctrl+S` |
-| Save As | `Ctrl+Shift+S` |
-| Find | `Ctrl+F` |
-| Replace | `Ctrl+H` |
-| Next match | `Enter` |
-| Previous match | `Shift+Enter` |
-| Close the find panel | `Esc` |
+| Action               | Shortcut       |
+| -------------------- | -------------- |
+| New                  | `Ctrl+N`       |
+| Open                 | `Ctrl+O`       |
+| Save                 | `Ctrl+S`       |
+| Save As              | `Ctrl+Shift+S` |
+| Find                 | `Ctrl+F`       |
+| Replace              | `Ctrl+H`       |
+| Next match           | `Enter`        |
+| Previous match       | `Shift+Enter`  |
+| Toggle editor mode   | `Ctrl+Shift+E` |
+| Close the find panel | `Esc`          |
 
 ## Recovery Snapshots
 

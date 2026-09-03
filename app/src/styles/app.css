@@ -126,6 +126,10 @@ button:disabled {
   box-shadow: 0 12px 35px rgb(28 25 23 / 16%);
 }
 
+.view-menu-popover {
+  width: 230px;
+}
+
 .menu-popover::before {
   position: absolute;
   right: 0;
@@ -163,8 +167,85 @@ button:disabled {
   font-size: 12px;
 }
 
-.about-menu-button {
+.menu-section {
+  display: grid;
+  gap: 2px;
+}
+
+.menu-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px 3px;
+  color: #a8a29e;
+  font-size: 11px;
+}
+
+.menu-section-title kbd {
+  color: #a8a29e;
+  font:
+    11px/1 system-ui,
+    sans-serif;
+}
+
+.menu-separator {
+  height: 1px;
+  margin: 4px 6px;
+  background: #f0eeeb;
+}
+
+.menu-choice {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 30px;
+  padding: 5px 8px;
+  text-align: left;
+}
+
+.menu-choice[aria-pressed="true"] {
+  color: #0f766e;
+}
+
+.menu-check {
+  width: 18px;
+  color: #0f9f7a;
+  text-align: center;
+}
+
+.editor-mode-switch {
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 30px;
   margin-left: auto;
+  padding: 2px;
+  border: 1px solid #e7e5e4;
+  border-radius: 7px;
+  background: #f5f5f4;
+}
+
+.editor-mode-switch button {
+  height: 24px;
+  padding: 0 10px;
+  color: #78716c;
+  font: 400 12px/20px var(--ui-font);
+  white-space: nowrap;
+}
+
+.editor-mode-switch button:hover {
+  background: #ebe9e6;
+}
+
+.editor-mode-switch button.active {
+  color: #0f766e;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(28 25 23 / 10%);
+}
+
+.about-menu-button {
+  margin-left: 8px;
 }
 
 .recent-select,
@@ -180,6 +261,12 @@ button:disabled {
 
 .recent-select {
   width: 100%;
+}
+
+@media (max-width: 620px) {
+  .editor-mode-switch {
+    display: none;
+  }
 }
 
 .outline-panel {

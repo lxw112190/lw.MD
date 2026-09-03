@@ -186,6 +186,46 @@
   box-shadow: 0 12px 35px rgb(0 0 0 / 35%);
 }
 
+:root[data-theme="dark"] .view-menu-popover {
+  background: #242424;
+}
+
+:root[data-theme="dark"] .menu-section-title,
+:root[data-theme="dark"] .menu-section-title kbd {
+  color: #a8a29e;
+}
+
+:root[data-theme="dark"] .menu-separator {
+  background: #343434;
+}
+
+:root[data-theme="dark"] .menu-choice[aria-pressed="true"] {
+  color: #99f6e4;
+}
+
+:root[data-theme="dark"] .menu-check {
+  color: #5eead4;
+}
+
+:root[data-theme="dark"] .editor-mode-switch {
+  border-color: #404040;
+  background: #181818;
+}
+
+:root[data-theme="dark"] .editor-mode-switch button {
+  color: #a8a29e;
+}
+
+:root[data-theme="dark"] .editor-mode-switch button:hover {
+  background: #2b2b2b;
+}
+
+:root[data-theme="dark"] .editor-mode-switch button.active {
+  color: #99f6e4;
+  background: #2b2b2b;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 28%);
+}
+
 :root[data-theme="dark"] .find-panel {
   border-color: #404040;
   background: #242424;

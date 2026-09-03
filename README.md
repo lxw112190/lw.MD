@@ -52,17 +52,18 @@ CI 生成的 EXE 暂未进行商业代码签名，因此 Windows SmartScreen 首
 
 ## 快捷键
 
-| 功能 | 快捷键 |
-| --- | --- |
-| 新建 | `Ctrl+N` |
-| 打开 | `Ctrl+O` |
-| 保存 | `Ctrl+S` |
-| 另存为 | `Ctrl+Shift+S` |
-| 查找 | `Ctrl+F` |
-| 替换 | `Ctrl+H` |
-| 下一个匹配项 | `Enter` |
-| 上一个匹配项 | `Shift+Enter` |
-| 关闭查找面板 | `Esc` |
+| 功能         | 快捷键         |
+| ------------ | -------------- |
+| 新建         | `Ctrl+N`       |
+| 打开         | `Ctrl+O`       |
+| 保存         | `Ctrl+S`       |
+| 另存为       | `Ctrl+Shift+S` |
+| 查找         | `Ctrl+F`       |
+| 替换         | `Ctrl+H`       |
+| 下一个匹配项 | `Enter`        |
+| 上一个匹配项 | `Shift+Enter`  |
+| 切换编辑模式 | `Ctrl+Shift+E` |
+| 关闭查找面板 | `Esc`          |
 
 ## 恢复快照
 

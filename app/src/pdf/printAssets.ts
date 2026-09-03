@@ -37,8 +37,11 @@ async function waitForImage(image: HTMLImageElement) {
   return true;
 }
 
-export async function waitForPrintAssets(target: HTMLElement) {
-  normalizeDocumentImages(target);
+export async function waitForPrintAssets(
+  target: HTMLElement,
+  resourceScope: string,
+) {
+  normalizeDocumentImages(target, resourceScope);
   const images = Array.from(target.querySelectorAll<HTMLImageElement>("img"));
   const loaded = await Promise.all(images.map(waitForImage));
   const failed = images

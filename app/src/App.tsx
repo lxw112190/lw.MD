@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import { AboutDialog } from "./components/AboutDialog";
+import { EditorModeSwitch } from "./components/EditorModeSwitch";
 import { ExternalFileNotice } from "./components/ExternalFileNotice";
 import { FileConflictDialog } from "./components/FileConflictDialog";
 import { FindReplacePanel } from "./components/FindReplacePanel";
@@ -42,9 +43,11 @@ import {
 import type { ExternalFileState } from "./document/externalFileState";
 import { addRecentFile, fileNameFromPath } from "./document/recentFiles";
 import { getMarkdownOutline } from "./markdown/outline";
+import { createDocumentResourceScope } from "./markdown/documentResourceScope";
 import { createDocumentMarkdownOptions } from "./markdown/vditorMarkdown";
 import { waitForPrintAssets } from "./pdf/printAssets";
 import { editorModeLabel } from "./editor/editorMode";
+import type { EditorMode } from "./editor/editorMode";
 import {
   checkForUpdate,
   latestReleaseUrl,
@@ -64,6 +67,9 @@ const defaultSettings: DesktopSettings = {
 export default function App() {
   const [document, setDocument] = useState<DocumentState>(
     createUntitledDocument,
+  );
+  const [documentResourceScope, setDocumentResourceScope] = useState(
+    createDocumentResourceScope,
   );
   const [status, setStatus] = useState("就绪");
   const [settings, setSettings] = useState(defaultSettings);
@@ -85,6 +91,7 @@ export default function App() {
   const [availableUpdate, setAvailableUpdate] = useState<UpdateInfo | null>(
     null,
   );
+  const viewMenu = useRef<HTMLDetailsElement>(null);
   const editor = useRef<MarkdownEditorHandle>(null);
   const printDocument = useRef<HTMLDivElement>(null);
   const documentRef = useRef(document);
@@ -102,6 +109,9 @@ export default function App() {
   const title = `${document.name}${document.dirty ? " *" : ""} — lw.MD`;
   const hasPersistenceRisk =
     document.dirty || externalFileState.kind !== "none";
+  const renewDocumentResourceScope = useCallback(() => {
+    setDocumentResourceScope(createDocumentResourceScope());
+  }, []);
   const acceptDocument = useCallback(
     (result: NativeDocument, clearRecovery = true) => {
       if (clearRecovery) {
@@ -115,13 +125,14 @@ export default function App() {
         encoding: "utf-8",
         revision: result.revision,
       });
+      renewDocumentResourceScope();
       setExternalFileState({ kind: "none" });
       setSettings((current) => ({
         ...current,
         recentFiles: addRecentFile(current.recentFiles, result.path),
       }));
     },
-    [],
+    [renewDocumentResourceScope],
   );
   const changeContent = useCallback((content: string) => {
     setDocument((current) => updateDocumentContent(current, content));
@@ -132,15 +143,41 @@ export default function App() {
       window.confirm("当前文档或磁盘文件存在未处理修改，确定放弃吗？"),
     [hasPersistenceRisk],
   );
+  const setTheme = useCallback((theme: ThemeMode) => {
+    setSettings((current) =>
+      current.theme === theme ? current : { ...current, theme },
+    );
+  }, []);
+  const setEditorMode = useCallback((editorMode: EditorMode) => {
+    setSettings((current) =>
+      current.editorMode === editorMode ? current : { ...current, editorMode },
+    );
+  }, []);
+  const toggleEditorMode = useCallback(() => {
+    setSettings((current) => ({
+      ...current,
+      editorMode: current.editorMode === "ir" ? "sv" : "ir",
+    }));
+  }, []);
+  const toggleOutline = useCallback(() => {
+    setSettings((current) => ({
+      ...current,
+      outlineVisible: !current.outlineVisible,
+    }));
+  }, []);
+  const closeViewMenu = useCallback(() => {
+    viewMenu.current?.removeAttribute("open");
+  }, []);
   const createNew = useCallback(() => {
     if (!confirmDiscard()) return;
     void desktop.recovery.clear().catch(() => undefined);
     lastRecoverySnapshot.current = null;
     void desktop.file.clearCurrent().catch(() => undefined);
     setDocument(createUntitledDocument());
+    renewDocumentResourceScope();
     setExternalFileState({ kind: "none" });
     setStatus("新建文档");
-  }, [confirmDiscard]);
+  }, [confirmDiscard, renewDocumentResourceScope]);
   const open = useCallback(async () => {
     if (!confirmDiscard()) return;
     try {
@@ -177,6 +214,7 @@ export default function App() {
         return;
       }
       try {
+        const previousPath = document.path;
         const result =
           !saveAs && document.path
             ? document.revision
@@ -209,6 +247,9 @@ export default function App() {
             ...current,
             recentFiles: addRecentFile(current.recentFiles, result.path),
           }));
+          if (previousPath !== result.path) {
+            renewDocumentResourceScope();
+          }
           setStatus("已保存");
         }
       } catch (error) {
@@ -242,7 +283,7 @@ export default function App() {
         setStatus(errorMessage(error));
       }
     },
-    [document, externalFileState],
+    [document, externalFileState, renewDocumentResourceScope],
   );
   const reloadFromDisk = useCallback(async () => {
     const current = documentRef.current;
@@ -279,7 +320,7 @@ export default function App() {
         markdown: createDocumentMarkdownOptions(),
         render: { media: { enable: false } },
       });
-      await waitForPrintAssets(target);
+      await waitForPrintAssets(target, documentResourceScope);
       const result = await desktop.pdf.export(pdfName(document.name));
       setStatus(result ? `PDF 已导出：${result.name}` : "已取消导出 PDF");
     } catch (error) {
@@ -287,7 +328,7 @@ export default function App() {
     } finally {
       setExportingPdf(false);
     }
-  }, [document.content, document.name, exportingPdf]);
+  }, [document.content, document.name, documentResourceScope, exportingPdf]);
   const savePastedImages = useCallback(
     async (files: File[]) => {
       if (!document.path) {
@@ -379,6 +420,7 @@ export default function App() {
         encoding: "utf-8",
         revision: null,
       });
+      renewDocumentResourceScope();
       setExternalFileState({ kind: "none" });
       setPendingRecovery(null);
       setRecoveryReady(true);
@@ -386,7 +428,7 @@ export default function App() {
     } catch (error) {
       setStatus(errorMessage(error));
     }
-  }, []);
+  }, [renewDocumentResourceScope]);
   const discardRecovery = useCallback(async () => {
     try {
       await desktop.recovery.clear();
@@ -624,6 +666,11 @@ export default function App() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!event.ctrlKey) return;
       const key = event.key.toLowerCase();
+      if (event.shiftKey && !event.altKey && key === "e") {
+        event.preventDefault();
+        toggleEditorMode();
+        return;
+      }
       if (key === "f" || key === "h") {
         event.preventDefault();
         event.stopPropagation();
@@ -645,7 +692,7 @@ export default function App() {
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [createNew, open, save]);
+  }, [createNew, open, save, toggleEditorMode]);
   if (!bootReady) {
     return (
       <main className="boot-screen" role="status" aria-live="polite">
@@ -720,6 +767,7 @@ export default function App() {
             </div>
           </details>
           <details
+            ref={viewMenu}
             className="menu-dropdown"
             name="application-menu"
             onMouseLeave={(event) =>
@@ -727,55 +775,67 @@ export default function App() {
             }
           >
             <summary>视图</summary>
-            <div className="menu-popover">
+            <div className="menu-popover view-menu-popover">
               <button
-                onClick={() =>
-                  setSettings((current) => ({
-                    ...current,
-                    outlineVisible: !current.outlineVisible,
-                  }))
-                }
+                onClick={() => {
+                  toggleOutline();
+                  closeViewMenu();
+                }}
               >
                 {settings.outlineVisible ? "隐藏大纲" : "显示大纲"}
               </button>
-              <label>
-                主题
-                <select
-                  className="theme-select"
-                  value={settings.theme}
-                  onChange={(event) =>
-                    setSettings((current) => ({
-                      ...current,
-                      theme: event.target.value as ThemeMode,
-                    }))
-                  }
-                  aria-label="主题"
-                >
-                  <option value="system">跟随系统</option>
-                  <option value="light">浅色</option>
-                  <option value="dark">深色</option>
-                </select>
-              </label>
-              <label>
-                编辑模式
-                <select
-                  className="theme-select"
-                  value={settings.editorMode}
-                  onChange={(event) =>
-                    setSettings((current) => ({
-                      ...current,
-                      editorMode: event.target
-                        .value as keyof typeof editorModeLabel,
-                    }))
-                  }
-                  aria-label="编辑模式"
-                >
-                  <option value="ir">{editorModeLabel.ir}</option>
-                  <option value="sv">{editorModeLabel.sv}</option>
-                </select>
-              </label>
+              <div className="menu-separator" />
+              <div className="menu-section">
+                <div className="menu-section-title">主题</div>
+                {(
+                  [
+                    ["system", "跟随系统"],
+                    ["light", "浅色"],
+                    ["dark", "深色"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    className="menu-choice"
+                    aria-pressed={settings.theme === value}
+                    onClick={() => setTheme(value)}
+                  >
+                    <span className="menu-check" aria-hidden="true">
+                      {settings.theme === value ? "✓" : ""}
+                    </span>
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="menu-separator" />
+              <div className="menu-section">
+                <div className="menu-section-title">
+                  <span>编辑模式</span>
+                  <kbd>Ctrl+Shift+E</kbd>
+                </div>
+                {(["ir", "sv"] as const).map((value) => (
+                  <button
+                    key={value}
+                    className="menu-choice"
+                    aria-pressed={settings.editorMode === value}
+                    onClick={() => {
+                      setEditorMode(value);
+                      closeViewMenu();
+                    }}
+                  >
+                    <span className="menu-check" aria-hidden="true">
+                      {settings.editorMode === value ? "✓" : ""}
+                    </span>
+                    <span>{editorModeLabel[value]}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </details>
+          <EditorModeSwitch
+            mode={settings.editorMode}
+            onChange={setEditorMode}
+          />
           <button
             className="about-menu-button"
             onClick={() => setAboutOpen(true)}
@@ -829,6 +889,7 @@ export default function App() {
           dropActive={dropActive}
           theme={resolvedTheme}
           mode={settings.editorMode}
+          resourceScope={documentResourceScope}
         />
       </section>
       <footer>
