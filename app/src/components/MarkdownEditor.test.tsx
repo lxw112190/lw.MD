@@ -286,10 +286,25 @@ describe("MarkdownEditor", () => {
       searchInput.focus();
       expect(document.activeElement).toBe(searchInput);
 
-      expect(editorRef.current?.revealText("target", 0, false)).toBe(true);
-      expect(document.activeElement).toBe(searchInput);
-      expect(window.getSelection()?.toString()).toBe("target");
-      searchInput.remove();
+      const selection = window.getSelection();
+      expect(selection).not.toBeNull();
+      const addRange = selection!.addRange.bind(selection);
+      const addRangeSpy = vi
+        .spyOn(selection!, "addRange")
+        .mockImplementation((range) => {
+          addRange(range);
+          editorRoot.focus();
+        });
+
+      try {
+        expect(editorRef.current?.revealText("target", 0, false)).toBe(true);
+        expect(addRangeSpy).toHaveBeenCalledOnce();
+        expect(addRangeSpy.mock.calls[0][0].toString()).toBe("target");
+        expect(document.activeElement).toBe(searchInput);
+      } finally {
+        addRangeSpy.mockRestore();
+        searchInput.remove();
+      }
     },
   );
 });

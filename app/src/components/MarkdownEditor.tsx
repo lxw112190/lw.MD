@@ -264,10 +264,11 @@ function revealTextInEditor(
   matchCase: boolean,
   mode: EditorMode,
 ) {
-  const root = container?.querySelector<HTMLElement>(
+  if (!container || !query) return false;
+  const root = container.querySelector<HTMLElement>(
     mode === "sv" ? ".vditor-sv" : ".vditor-ir",
   );
-  if (!root || !query) return false;
+  if (!root) return false;
 
   const walker = window.document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const segments: Array<{ node: Text; start: number; end: number }> = [];
@@ -297,12 +298,33 @@ function revealTextInEditor(
   );
   if (!startSegment || !endSegment) return false;
 
+  const activeElement =
+    window.document.activeElement instanceof HTMLElement &&
+    !container.contains(window.document.activeElement)
+      ? window.document.activeElement
+      : null;
+  const restoreExternalFocus = () => {
+    const current = window.document.activeElement;
+    if (
+      !activeElement?.isConnected ||
+      current === activeElement ||
+      !current ||
+      !container.contains(current)
+    ) {
+      return;
+    }
+    activeElement.focus({ preventScroll: true });
+  };
+
   const range = window.document.createRange();
   range.setStart(startSegment.node, start - startSegment.start);
   range.setEnd(endSegment.node, end - endSegment.start);
   const selection = window.getSelection();
   selection?.removeAllRanges();
   selection?.addRange(range);
+  restoreExternalFocus();
+  queueMicrotask(restoreExternalFocus);
+  window.requestAnimationFrame(restoreExternalFocus);
   startSegment.node.parentElement?.scrollIntoView({
     behavior: "smooth",
     block: "center",
