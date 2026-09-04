@@ -1,4 +1,4 @@
-import { act } from "react";
+import { act, createRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -62,7 +62,7 @@ const mock = vi.hoisted(() => {
 
 vi.mock("vditor", () => ({ default: mock.MockVditor }));
 
-import { MarkdownEditor } from "./MarkdownEditor";
+import { MarkdownEditor, type MarkdownEditorHandle } from "./MarkdownEditor";
 
 describe("MarkdownEditor", () => {
   let root: Root | null = null;
@@ -244,4 +244,52 @@ describe("MarkdownEditor", () => {
       "sv",
     ]);
   });
+
+  it.each([
+    ["ir", "vditor-ir"],
+    ["sv", "vditor-sv"],
+  ] as const)(
+    "reveals text in %s mode without stealing focus",
+    async (mode, rootClass) => {
+      host = document.createElement("div");
+      document.body.append(host);
+      root = createRoot(host);
+      const editorRef = createRef<MarkdownEditorHandle>();
+
+      await act(async () => {
+        root?.render(
+          <MarkdownEditor
+            ref={editorRef}
+            value="前面的文字 target 后面的文字"
+            theme="light"
+            mode={mode}
+            dropActive={false}
+            onChange={vi.fn()}
+            onChooseImages={vi.fn(async () => [])}
+            onInsertImages={vi.fn(async () => [])}
+            resourceScope="test-document"
+          />,
+        );
+      });
+
+      const editorContainer = host.querySelector(".markdown-editor");
+      expect(editorContainer).not.toBeNull();
+      const editorRoot = document.createElement("div");
+      editorRoot.className = rootClass;
+      editorRoot.tabIndex = -1;
+      editorRoot.textContent = "前面的文字 target 后面的文字";
+      editorRoot.scrollIntoView = vi.fn();
+      editorContainer?.append(editorRoot);
+
+      const searchInput = document.createElement("input");
+      document.body.append(searchInput);
+      searchInput.focus();
+      expect(document.activeElement).toBe(searchInput);
+
+      expect(editorRef.current?.revealText("target", 0, false)).toBe(true);
+      expect(document.activeElement).toBe(searchInput);
+      expect(window.getSelection()?.toString()).toBe("target");
+      searchInput.remove();
+    },
+  );
 });

@@ -297,7 +297,6 @@ function revealTextInEditor(
   );
   if (!startSegment || !endSegment) return false;
 
-  root.focus();
   const range = window.document.createRange();
   range.setStart(startSegment.node, start - startSegment.start);
   range.setEnd(endSegment.node, end - endSegment.start);
