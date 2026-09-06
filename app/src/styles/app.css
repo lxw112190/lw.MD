@@ -146,13 +146,13 @@ button:disabled {
   text-align: left;
 }
 
-.edit-menu-popover button {
+.menu-command {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.edit-menu-popover kbd {
+.menu-command kbd {
   color: #a8a29e;
   font:
     11px/1 system-ui,

@@ -48,6 +48,7 @@ import { createDocumentMarkdownOptions } from "./markdown/vditorMarkdown";
 import { waitForPrintAssets } from "./pdf/printAssets";
 import { editorModeLabel } from "./editor/editorMode";
 import type { EditorMode } from "./editor/editorMode";
+import { appShortcuts, matchesShortcut } from "./keyboard/appShortcuts";
 import {
   checkForUpdate,
   latestReleaseUrl,
@@ -664,28 +665,39 @@ export default function App() {
   }, [settings.theme]);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!event.ctrlKey) return;
-      const key = event.key.toLowerCase();
-      if (event.shiftKey && !event.altKey && key === "e") {
+      if (matchesShortcut(event, appShortcuts.toggleEditorMode)) {
         event.preventDefault();
         toggleEditorMode();
         return;
       }
-      if (key === "f" || key === "h") {
+      if (matchesShortcut(event, appShortcuts.find)) {
         event.preventDefault();
         event.stopPropagation();
-        setFindMode(key === "h" ? "replace" : "find");
+        setFindMode("find");
         return;
       }
-      if (key === "s") {
+      if (matchesShortcut(event, appShortcuts.replace)) {
         event.preventDefault();
-        void save(event.shiftKey);
+        event.stopPropagation();
+        setFindMode("replace");
+        return;
       }
-      if (key === "o") {
+      if (matchesShortcut(event, appShortcuts.saveAs)) {
+        event.preventDefault();
+        void save(true);
+        return;
+      }
+      if (matchesShortcut(event, appShortcuts.save)) {
+        event.preventDefault();
+        void save();
+        return;
+      }
+      if (matchesShortcut(event, appShortcuts.open)) {
         event.preventDefault();
         void open();
+        return;
       }
-      if (key === "n") {
+      if (matchesShortcut(event, appShortcuts.newDocument)) {
         event.preventDefault();
         createNew();
       }
@@ -708,9 +720,24 @@ export default function App() {
     >
       <header>
         <div className="menu">
-          <button onClick={createNew}>新建</button>
-          <button onClick={() => void open()}>打开</button>
-          <button onClick={() => void save()}>保存</button>
+          <button
+            title={`新建（${appShortcuts.newDocument.label}）`}
+            onClick={createNew}
+          >
+            新建
+          </button>
+          <button
+            title={`打开（${appShortcuts.open.label}）`}
+            onClick={() => void open()}
+          >
+            打开
+          </button>
+          <button
+            title={`保存（${appShortcuts.save.label}）`}
+            onClick={() => void save()}
+          >
+            保存
+          </button>
           <details
             className="menu-dropdown"
             name="application-menu"
@@ -720,7 +747,23 @@ export default function App() {
           >
             <summary>文件</summary>
             <div className="menu-popover">
-              <button onClick={() => void save(true)}>另存为…</button>
+              <button className="menu-command" onClick={createNew}>
+                <span>新建</span>
+                <kbd>{appShortcuts.newDocument.label}</kbd>
+              </button>
+              <button className="menu-command" onClick={() => void open()}>
+                <span>打开…</span>
+                <kbd>{appShortcuts.open.label}</kbd>
+              </button>
+              <button className="menu-command" onClick={() => void save()}>
+                <span>保存</span>
+                <kbd>{appShortcuts.save.label}</kbd>
+              </button>
+              <button className="menu-command" onClick={() => void save(true)}>
+                <span>另存为…</span>
+                <kbd>{appShortcuts.saveAs.label}</kbd>
+              </button>
+              <div className="menu-separator" />
               <button disabled={exportingPdf} onClick={() => void exportPdf()}>
                 {exportingPdf ? "正在导出…" : "导出 PDF"}
               </button>
