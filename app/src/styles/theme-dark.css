@@ -7,6 +7,7 @@
   --surface-code: #252627;
   --border-subtle: #343434;
   --border-strong: #404040;
+  --diagram-edge: #b8c2cf;
   color: #e7e5e4;
   background: var(--surface-app);
   color-scheme: dark;
@@ -143,6 +144,54 @@
   background: #854d0e;
   border-radius: 2px;
   padding: 0 2px;
+}
+
+/* Mermaid defaults to a 1px #333 edge, which is nearly invisible on our dark canvas. */
+:root[data-theme="dark"]
+  .markdown-editor
+  .vditor-reset
+  .language-mermaid
+  svg
+  .flowchart-link,
+:root[data-theme="dark"]
+  .markdown-editor
+  .vditor-reset
+  .language-mermaid
+  svg
+  .edgePath
+  .path,
+:root[data-theme="dark"]
+  .markdown-editor
+  .vditor-reset
+  .language-mermaid
+  svg
+  .edge-thickness-normal {
+  stroke: var(--diagram-edge) !important;
+  stroke-width: 2px !important;
+  stroke-opacity: 1 !important;
+}
+
+:root[data-theme="dark"]
+  .markdown-editor
+  .vditor-reset
+  .language-mermaid
+  svg
+  .arrowheadPath,
+:root[data-theme="dark"]
+  .markdown-editor
+  .vditor-reset
+  .language-mermaid
+  svg
+  marker
+  path,
+:root[data-theme="dark"]
+  .markdown-editor
+  .vditor-reset
+  .language-mermaid
+  svg
+  .marker {
+  fill: var(--diagram-edge) !important;
+  stroke: var(--diagram-edge) !important;
 }
 
 :root[data-theme="dark"] .markdown-editor .vditor-ir h1,
