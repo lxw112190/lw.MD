@@ -28,6 +28,7 @@ std::filesystem::path SettingsPath() {
 json Defaults() {
   return {{"theme", "system"},
           {"outlineVisible", true},
+          {"outlineWidth", 280},
           {"recentFiles", json::array()},
           {"editorMode", "ir"}};
 }
@@ -39,6 +40,11 @@ json Normalize(const json& input) {
     result["theme"] = theme;
   }
   result["outlineVisible"] = input.value("outlineVisible", true);
+  const auto outline_width = input.find("outlineWidth");
+  if (outline_width != input.end() && outline_width->is_number_integer() &&
+      *outline_width >= 180 && *outline_width <= 420) {
+    result["outlineWidth"] = outline_width->get<int>();
+  }
   const auto editor_mode = input.value("editorMode", "ir");
   result["editorMode"] = editor_mode == "sv" ? "sv" : "ir";
   if (input.contains("recentFiles") && input["recentFiles"].is_array()) {

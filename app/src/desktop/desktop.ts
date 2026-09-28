@@ -57,6 +57,7 @@ export type ThemeMode = "system" | "light" | "dark";
 export interface DesktopSettings {
   theme: ThemeMode;
   outlineVisible: boolean;
+  outlineWidth: number;
   recentFiles: string[];
   editorMode: EditorMode;
 }

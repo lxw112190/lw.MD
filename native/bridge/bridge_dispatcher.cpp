@@ -161,10 +161,13 @@ void ValidateReadableMarkdown(const std::wstring& path) {
 
 void ValidateSettingsUpdate(const json& params,
                             const std::wstring& current_document_path) {
-  if (params.size() != 4U || !params.contains("theme") ||
+  if (params.size() != 5U || !params.contains("theme") ||
       !params.at("theme").is_string() ||
       !params.contains("outlineVisible") ||
       !params.at("outlineVisible").is_boolean() ||
+      !params.contains("outlineWidth") ||
+      !params.at("outlineWidth").is_number_integer() ||
+      params.at("outlineWidth") < 180 || params.at("outlineWidth") > 420 ||
       !params.contains("recentFiles") ||
       !params.at("recentFiles").is_array() ||
       params.at("recentFiles").size() > 10U ||

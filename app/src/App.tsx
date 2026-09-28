@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
 } from "react";
 import { AboutDialog } from "./components/AboutDialog";
 import { EditorModeSwitch } from "./components/EditorModeSwitch";
@@ -16,7 +17,7 @@ import {
   MarkdownEditor,
   type MarkdownEditorHandle,
 } from "./components/MarkdownEditor";
-import { OutlinePanel } from "./components/OutlinePanel";
+import { OutlinePanel, defaultOutlineWidth } from "./components/OutlinePanel";
 import { RecoveryDialog } from "./components/RecoveryDialog";
 import { WindowsIntegrationDialog } from "./components/WindowsIntegrationDialog";
 import { UpdateNotice } from "./components/UpdateNotice";
@@ -61,6 +62,7 @@ const recoveryDebounceMs = 1_500;
 const defaultSettings: DesktopSettings = {
   theme: "system",
   outlineVisible: true,
+  outlineWidth: defaultOutlineWidth,
   recentFiles: [],
   editorMode: "ir",
 };
@@ -74,6 +76,7 @@ export default function App() {
   );
   const [status, setStatus] = useState("就绪");
   const [settings, setSettings] = useState(defaultSettings);
+  const [outlineWidth, setOutlineWidth] = useState(defaultOutlineWidth);
   const [settingsReady, setSettingsReady] = useState(false);
   const [bootReady, setBootReady] = useState(false);
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
@@ -459,11 +462,12 @@ export default function App() {
         ] as const);
       if (cancelled) return;
 
-      setSettings(
+      const loadedSettings =
         settingsResult.status === "fulfilled"
           ? settingsResult.value
-          : defaultSettings,
-      );
+          : defaultSettings;
+      setSettings(loadedSettings);
+      setOutlineWidth(loadedSettings.outlineWidth);
       setSettingsReady(true);
 
       if (launchResult.status === "fulfilled") {
@@ -717,6 +721,7 @@ export default function App() {
   return (
     <main
       className={`app-shell${settings.outlineVisible ? " with-outline" : ""}`}
+      style={{ "--outline-width": `${outlineWidth}px` } as CSSProperties}
     >
       <header>
         <div className="menu">
@@ -917,8 +922,17 @@ export default function App() {
       {settings.outlineVisible && (
         <OutlinePanel
           items={outline}
+          width={outlineWidth}
           onSelect={(item, index) =>
             editor.current?.scrollToHeading(item.text, index)
+          }
+          onResize={setOutlineWidth}
+          onResizeEnd={(width) =>
+            setSettings((current) =>
+              current.outlineWidth === width
+                ? current
+                : { ...current, outlineWidth: width },
+            )
           }
         />
       )}
