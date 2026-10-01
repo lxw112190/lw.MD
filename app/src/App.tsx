@@ -669,6 +669,12 @@ export default function App() {
   }, [settings.theme]);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.target instanceof Element &&
+        event.target.closest("dialog[open]")
+      ) {
+        return;
+      }
       if (matchesShortcut(event, appShortcuts.toggleEditorMode)) {
         event.preventDefault();
         toggleEditorMode();
@@ -894,6 +900,7 @@ export default function App() {
       </header>
       {availableUpdate && (
         <UpdateNotice
+          currentVersion={availableUpdate.currentVersion}
           version={availableUpdate.latestVersion}
           onOpen={() => void openUpdate()}
           onDismiss={() => setAvailableUpdate(null)}

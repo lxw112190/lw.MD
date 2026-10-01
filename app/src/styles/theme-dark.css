@@ -301,16 +301,39 @@
   background: #332d1a;
 }
 
-:root[data-theme="dark"] .update-notice {
-  border-color: #236b59;
-  color: #99f6e4;
-  background: #142b26;
+:root[data-theme="dark"] .update-dialog {
+  border-color: var(--border-strong);
+  color: #f5f5f4;
+  background: var(--surface-raised);
+  box-shadow: 0 24px 70px rgb(0 0 0 / 45%);
 }
 
-:root[data-theme="dark"] .update-notice button {
-  border-color: #3d7465;
+:root[data-theme="dark"] .update-dialog p {
+  color: #a8a29e;
+}
+
+:root[data-theme="dark"] .update-dialog .update-dialog-version {
+  color: #99f6e4;
+}
+
+:root[data-theme="dark"] .update-dialog button {
+  border-color: #525252;
   color: #d6d3d1;
-  background: var(--surface-raised);
+  background: var(--surface-chrome);
+}
+
+:root[data-theme="dark"] .update-dialog button:hover {
+  background: var(--surface-hover);
+}
+
+:root[data-theme="dark"] .update-dialog button.primary {
+  border-color: #12856b;
+  color: #99f6e4;
+  background: #143d35;
+}
+
+:root[data-theme="dark"] .update-dialog button.primary:hover {
+  background: #1b5145;
 }
 
 :root[data-theme="dark"] .external-file-notice button,

@@ -18,7 +18,7 @@
 - Instant-rendering and Source + Preview modes, with the last choice remembered
 - Offline rendering for Mermaid diagrams and inline or block KaTeX formulas
 - Lightweight `==highlight==` markup, also preserved in PDF exports
-- Background GitHub release checks after startup, with a browser download link when an update is available
+- Background GitHub release checks after startup, with a centered update dialog to open the release page or dismiss for later
 - New, open, atomic UTF-8 save, and Save As operations
 - Find, replace, case-sensitive matching, and result navigation
 - Drag and drop for Markdown files and images, plus clipboard image pasting

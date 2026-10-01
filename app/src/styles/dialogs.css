@@ -26,33 +26,74 @@
   font-size: 12px;
 }
 
-.update-notice {
-  grid-column: 1 / -1;
-  z-index: 64;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 7px 14px;
-  border-bottom: 1px solid #9edfc9;
-  color: #0f6b55;
-  background: #effcf7;
-  font-size: 12px;
+.update-dialog {
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  margin: auto;
+  padding: 24px;
+  overflow-y: auto;
+  border: 1px solid #e7e5e4;
+  border-radius: 12px;
+  color: #292524;
+  background: #fff;
+  box-shadow: 0 24px 70px rgb(28 25 23 / 26%);
 }
 
-.update-notice > div {
+.update-dialog::backdrop {
+  background: rgb(28 25 23 / 46%);
+}
+
+.update-dialog h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+.update-dialog p {
+  margin: 0 0 18px;
+  color: #57534e;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.update-dialog .update-dialog-version {
+  color: #0f766e;
+  font-size: 15px;
+}
+
+.update-dialog-actions {
   display: flex;
+  justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 8px;
 }
 
-.update-notice button {
-  border: 1px solid #a7d8c8;
-  border-radius: 5px;
-  padding: 4px 9px;
+.update-dialog button {
+  min-height: 34px;
+  border: 1px solid #d6d3d1;
+  border-radius: 6px;
+  padding: 6px 14px;
   background: #fff;
   color: inherit;
-  font-size: 12px;
+  font: 400 13px/20px var(--ui-font);
+}
+
+.update-dialog button:hover {
+  background: #f5f5f4;
+}
+
+.update-dialog button.primary {
+  border-color: #0f766e;
+  color: #fff;
+  background: #0f766e;
+}
+
+.update-dialog button.primary:hover {
+  background: #115e59;
+}
+
+.update-dialog button:focus-visible {
+  outline: 2px solid #14a780;
+  outline-offset: 2px;
 }
 
 .external-file-notice > div,
