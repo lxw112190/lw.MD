@@ -10,7 +10,6 @@ import {
 } from "react";
 import { AboutDialog } from "./components/AboutDialog";
 import { EditorModeSwitch } from "./components/EditorModeSwitch";
-import { ExternalFileNotice } from "./components/ExternalFileNotice";
 import { FileConflictDialog } from "./components/FileConflictDialog";
 import { FindReplacePanel } from "./components/FindReplacePanel";
 import {
@@ -131,6 +130,7 @@ export default function App() {
       });
       renewDocumentResourceScope();
       setExternalFileState({ kind: "none" });
+      setConflictDialogOpen(false);
       setSettings((current) => ({
         ...current,
         recentFiles: addRecentFile(current.recentFiles, result.path),
@@ -180,6 +180,7 @@ export default function App() {
     setDocument(createUntitledDocument());
     renewDocumentResourceScope();
     setExternalFileState({ kind: "none" });
+    setConflictDialogOpen(false);
     setStatus("新建文档");
   }, [confirmDiscard, renewDocumentResourceScope]);
   const open = useCallback(async () => {
@@ -247,6 +248,7 @@ export default function App() {
             ),
           );
           setExternalFileState({ kind: "none" });
+          setConflictDialogOpen(false);
           setSettings((current) => ({
             ...current,
             recentFiles: addRecentFile(current.recentFiles, result.path),
@@ -427,6 +429,7 @@ export default function App() {
       renewDocumentResourceScope();
       setExternalFileState({ kind: "none" });
       setPendingRecovery(null);
+      setConflictDialogOpen(false);
       setRecoveryReady(true);
       setStatus("已恢复上次未保存的内容，请确认后保存");
     } catch (error) {
@@ -623,14 +626,25 @@ export default function App() {
             latest.revision?.sha256 === checkedHash
           ) {
             if (result.state === "missing") {
+              if (externalFileStateRef.current.kind !== "missing") {
+                setConflictDialogOpen(true);
+              }
               setExternalFileState({ kind: "missing" });
             } else if (result.state === "changed" && result.revision) {
+              const previous = externalFileStateRef.current;
+              if (
+                previous.kind !== "changed" ||
+                previous.observedRevision.sha256 !== result.revision.sha256
+              ) {
+                setConflictDialogOpen(true);
+              }
               setExternalFileState({
                 kind: "changed",
                 observedRevision: result.revision,
               });
             } else if (result.revision) {
               setExternalFileState({ kind: "none" });
+              setConflictDialogOpen(false);
               setDocument((previous) =>
                 previous.path === checkedPath &&
                 previous.revision?.sha256 === checkedHash
@@ -898,7 +912,7 @@ export default function App() {
           </button>
         </div>
       </header>
-      {availableUpdate && (
+      {availableUpdate && !conflictDialogOpen && (
         <UpdateNotice
           currentVersion={availableUpdate.currentVersion}
           version={availableUpdate.latestVersion}
@@ -906,13 +920,6 @@ export default function App() {
           onDismiss={() => setAvailableUpdate(null)}
         />
       )}
-      <ExternalFileNotice
-        state={externalFileState}
-        dirty={document.dirty}
-        onReload={() => void reloadFromDisk()}
-        onSaveAs={() => void save(true)}
-        onContinue={continueWithCurrentContent}
-      />
       {findMode && (
         <FindReplacePanel
           content={document.content}
@@ -981,6 +988,7 @@ export default function App() {
       {conflictDialogOpen && (
         <FileConflictDialog
           state={externalFileState}
+          dirty={document.dirty}
           onReload={() => void reloadFromDisk()}
           onSaveAs={() => {
             setConflictDialogOpen(false);

@@ -25,7 +25,7 @@
 - Automatic management of the `assets` image directory beside each document
 - Document outline, recent files, and light, dark, or system-following themes
 - Periodic recovery snapshots for restoring unsaved work after an unexpected exit
-- External-change detection, protected saves, and conflict handling to prevent overwriting edits
+- External-change detection with a separate conflict dialog that preserves the editor layout; each change is announced once, with conflicts checked again before saving
 - A4 PDF export
 - Persistent window position, size, and maximized state
 - Windows high-DPI and mixed-scaling multi-monitor support

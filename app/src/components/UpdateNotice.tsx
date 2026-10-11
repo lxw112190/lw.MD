@@ -1,5 +1,4 @@
-import { useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
+import { ModalDialog } from "./ModalDialog";
 
 interface UpdateNoticeProps {
   currentVersion: string;
@@ -14,47 +13,12 @@ export function UpdateNotice({
   onOpen,
   onDismiss,
 }: UpdateNoticeProps) {
-  const dialog = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    const element = dialog.current;
-    const previousFocus = document.activeElement;
-    element?.showModal();
-    return () => {
-      element?.close();
-      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
-        previousFocus.focus({ preventScroll: true });
-      }
-    };
-  }, []);
-
-  // Keep the modal out of the editor grid so an update cannot consume its row.
-  return createPortal(
-    <dialog
-      ref={dialog}
+  return (
+    <ModalDialog
       className="update-dialog"
-      aria-labelledby="update-dialog-title"
-      aria-describedby="update-dialog-description"
-      onCancel={(event) => {
-        event.preventDefault();
-        onDismiss();
-      }}
-      onKeyDown={(event) => {
-        event.stopPropagation();
-        if (event.key !== "Tab") return;
-        const buttons = event.currentTarget.querySelectorAll<HTMLButtonElement>(
-          "button:not(:disabled)",
-        );
-        const first = buttons[0];
-        const last = buttons[buttons.length - 1];
-        if (event.shiftKey && document.activeElement === first) {
-          event.preventDefault();
-          last?.focus();
-        } else if (!event.shiftKey && document.activeElement === last) {
-          event.preventDefault();
-          first?.focus();
-        }
-      }}
+      titleId="update-dialog-title"
+      descriptionId="update-dialog-description"
+      onDismiss={onDismiss}
     >
       <h2 id="update-dialog-title">发现新版本</h2>
       <p className="update-dialog-version">
@@ -69,7 +33,6 @@ export function UpdateNotice({
           查看更新
         </button>
       </div>
-    </dialog>,
-    document.body,
+    </ModalDialog>
   );
 }

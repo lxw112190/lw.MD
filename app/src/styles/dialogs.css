@@ -13,19 +13,6 @@
   box-shadow: 0 14px 40px rgb(28 25 23 / 18%);
 }
 
-.external-file-notice {
-  z-index: 65;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 7px 14px;
-  border-bottom: 1px solid #f0b429;
-  color: #7c4a03;
-  background: #fff8df;
-  font-size: 12px;
-}
-
 .update-dialog {
   width: min(420px, calc(100vw - 32px));
   max-height: calc(100vh - 32px);
@@ -96,14 +83,12 @@
   outline-offset: 2px;
 }
 
-.external-file-notice > div,
 .modal-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
 }
 
-.external-file-notice button,
 .modal-actions button {
   border: 1px solid #d6d3d1;
   border-radius: 5px;
@@ -113,22 +98,25 @@
   font-size: 12px;
 }
 
-.modal-backdrop {
-  position: fixed;
-  z-index: 130;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 16px;
+.modal-actions button:focus-visible {
+  outline: 2px solid #14a780;
+  outline-offset: 2px;
+}
+
+.modal-dialog::backdrop {
   background: rgb(28 25 23 / 46%);
 }
 
 .modal-dialog {
-  width: min(460px, 100%);
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  margin: auto;
   padding: 22px;
+  overflow-y: auto;
   border: 1px solid #e7e5e4;
   border-radius: 12px;
   background: #fff;
+  color: #292524;
   box-shadow: 0 24px 70px rgb(28 25 23 / 26%);
 }
 
