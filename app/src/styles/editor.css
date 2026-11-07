@@ -46,7 +46,7 @@
   border: 0;
   border-bottom: 1px solid #efeeec;
   background: #fafaf9;
-  padding-left: max(16px, calc((100% - 820px) / 2));
+  padding-left: max(16px, calc((100% - 1200px) / 2));
 }
 
 .markdown-editor .vditor-content {

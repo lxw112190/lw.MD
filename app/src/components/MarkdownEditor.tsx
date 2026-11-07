@@ -92,6 +92,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         icon: vditorRuntime.icon as "material",
         theme: "classic",
         preview: {
+          maxWidth: 1200,
           markdown: createDocumentMarkdownOptions(),
           math: {
             engine: vditorRuntime.math.engine as "KaTeX",
