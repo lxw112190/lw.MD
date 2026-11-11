@@ -1,5 +1,6 @@
 {
   "locale": "zh_CN",
+  "locales": ["zh_CN", "en_US"],
   "icon": "material",
   "themes": {
     "light": {

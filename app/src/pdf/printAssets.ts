@@ -1,9 +1,10 @@
+import { t } from "../i18n";
 import { normalizeDocumentImages } from "../markdown/documentImages";
 
 const imageTimeoutMs = 8_000;
 
 function imageLabel(image: HTMLImageElement) {
-  return image.getAttribute("src") || image.alt || "未知图片";
+  return image.getAttribute("src") || image.alt || t("未知图片");
 }
 
 async function waitForImage(image: HTMLImageElement) {
@@ -50,8 +51,10 @@ export async function waitForPrintAssets(
   if (failed.length > 0) {
     const shown = failed.slice(0, 3).join("\n");
     const remaining =
-      failed.length > 3 ? `\n另有 ${failed.length - 3} 张图片` : "";
-    throw new Error(`图片无法载入，已取消导出 PDF：\n${shown}${remaining}`);
+      failed.length > 3 ? t("\n另有 {0} 张图片", failed.length - 3) : "";
+    throw new Error(
+      t("图片无法载入，已取消导出 PDF：\n{0}{1}", shown, remaining),
+    );
   }
 
   await window.document.fonts?.ready;

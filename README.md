@@ -37,6 +37,10 @@ Mermaid 使用语言标记为 `mermaid` 的围栏代码块；行内公式使用 
 
 ## 快速开始
 
+界面支持简体中文和 English，在“视图 → 语言 / Language”中切换并记住选择。
+已有设置升级后保持中文；首次运行时，中文 Windows 默认中文，其他系统语言默认 English。
+文件对话框的系统按钮遵循 Windows 显示语言。
+
 1. 从 [Releases](https://github.com/lxw112190/lw.MD/releases) 下载最新的 `lw.MD-windows-x64.zip`。
 2. 解压后运行 `lw.MD.exe`。
 3. 点击“打开”，或者将 Markdown 文件拖入窗口。

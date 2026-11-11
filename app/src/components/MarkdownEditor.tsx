@@ -1,3 +1,4 @@
+import { t, useLanguage } from "../i18n";
 import Vditor from "vditor";
 import "vditor/dist/index.css";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
@@ -52,6 +53,12 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     ref,
   ) {
     const container = useRef<HTMLDivElement>(null);
+    const language = useLanguage();
+    const history = useRef<{
+      language: string;
+      mode: EditorMode;
+      undo: Vditor["vditor"]["undo"];
+    } | null>(null);
     const editor = useRef<Vditor | null>(null);
     const valueRef = useRef(value);
     const readyRef = useRef(false);
@@ -65,6 +72,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     useEffect(() => {
       if (!container.current) return;
       const editorContainer = container.current;
+      let disposed = false;
       let imageScanFrame: number | null = null;
       const scheduleImageScan = () => {
         if (imageScanFrame !== null) return;
@@ -85,7 +93,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
       });
       const instance = new Vditor(container.current, {
         mode,
-        lang: vditorRuntime.locale as "zh_CN",
+        lang: language,
         cache: { enable: false },
         cdn: "/vditor",
         height: "100%",
@@ -123,7 +131,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
           {
             name: "insert-image",
             icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Zm0 16H5l3.5-4.5 2.5 3.01L14.5 13l4.5 6ZM8.5 10.5A1.5 1.5 0 1 1 8.5 7a1.5 1.5 0 0 1 0 3.5Z"/></svg>',
-            tip: "插入本地图片",
+            tip: t("插入本地图片"),
             click: () => {
               void onChooseImagesRef.current().then((paths) => {
                 if (paths.length > 0) {
@@ -141,12 +149,22 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         value: valueRef.current,
         after: () =>
           queueMicrotask(() => {
+            if (disposed) return;
             const current = editor.current;
             if (!current) return;
             const latestValue = valueRef.current;
             if (current.getValue() !== latestValue) {
               current.setValue(latestValue, true);
             }
+            if (
+              history.current &&
+              history.current.language !== language &&
+              history.current.mode === mode
+            ) {
+              current.vditor.undo = history.current.undo;
+              current.vditor.undo?.resetIcon?.(current.vditor);
+            }
+            history.current = null;
             scheduleImageScan();
             readyRef.current = true;
             const currentTheme = themeRef.current;
@@ -154,23 +172,33 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
             current.focus();
           }),
         input: (nextValue) => {
-          if (!readyRef.current) return;
+          if (disposed || !readyRef.current) return;
           valueRef.current = nextValue;
           onChange(nextValue);
         },
       });
       editor.current = instance;
       return () => {
+        disposed = true;
         imageObserver.disconnect();
         scheduleImageScanRef.current = () => undefined;
         if (imageScanFrame !== null) {
           window.cancelAnimationFrame(imageScanFrame);
         }
-        if (readyRef.current && instance.vditor?.element) instance.destroy();
+        if (readyRef.current && instance.vditor?.element) {
+          const latest = instance.getValue();
+          if (latest !== valueRef.current) {
+            valueRef.current = latest;
+            onChange(latest);
+          }
+          instance.vditor.undo?.addToUndoStack?.(instance.vditor);
+          history.current = { language, mode, undo: instance.vditor.undo };
+          instance.destroy();
+        }
         readyRef.current = false;
         editor.current = null;
       };
-    }, [onChange, mode]);
+    }, [onChange, mode, language]);
     useEffect(() => {
       if (value === valueRef.current) return;
       valueRef.current = value;
@@ -249,8 +277,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         <div ref={container} className="markdown-editor" />
         {dropActive && (
           <div className="drop-overlay" role="status">
-            <strong>松开鼠标</strong>
-            <span>打开 Markdown 或插入图片</span>
+            <strong>{t("松开鼠标")}</strong>
+            <span>{t("打开 Markdown 或插入图片")}</span>
           </div>
         )}
       </div>

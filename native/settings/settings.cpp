@@ -25,8 +25,9 @@ std::filesystem::path SettingsPath() {
   return directory / L"settings.json";
 }
 
-json Defaults() {
-  return {{"theme", "system"},
+json Defaults(bool first_run = false) {
+  return {{"language", DefaultUiLanguage(GetUserDefaultUILanguage(), !first_run)},
+          {"theme", "system"},
           {"outlineVisible", true},
           {"outlineWidth", 280},
           {"recentFiles", json::array()},
@@ -35,6 +36,8 @@ json Defaults() {
 
 json Normalize(const json& input) {
   auto result = Defaults();
+  if (input.contains("language") && input["language"].is_string() &&
+      input["language"] == "en_US") result["language"] = "en_US";
   const auto theme = input.value("theme", "system");
   if (theme == "system" || theme == "light" || theme == "dark") {
     result["theme"] = theme;
@@ -82,7 +85,7 @@ json Normalize(const json& input) {
 
 json LoadSettings() {
   const auto path = SettingsPath();
-  if (!std::filesystem::exists(path)) return Defaults();
+  if (!std::filesystem::exists(path)) return Defaults(true);
   try {
     return Normalize(json::parse(ReadUtf8File(path.wstring())));
   } catch (...) {
@@ -97,6 +100,15 @@ void SaveSettings(const json& value) {
     if (existing.contains("window")) normalized["window"] = existing["window"];
   }
   WriteUtf8FileAtomically(SettingsPath().wstring(), normalized.dump(2));
+}
+
+const wchar_t* UiText(const wchar_t* chinese, const wchar_t* english) {
+  try { return LoadSettings().value("language", "zh_CN") == "en_US" ? english : chinese; }
+  catch (...) { return chinese; }
+}
+
+const char* DefaultUiLanguage(unsigned short system_language, bool existing_settings) {
+  return existing_settings || PRIMARYLANGID(system_language) == LANG_CHINESE ? "zh_CN" : "en_US";
 }
 
 std::optional<SavedWindowState> LoadWindowState(const json& settings) {

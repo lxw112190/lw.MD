@@ -55,6 +55,7 @@ export interface FileAssociationStatus {
 }
 export type ThemeMode = "system" | "light" | "dark";
 export interface DesktopSettings {
+  language: import("../i18n").Language;
   theme: ThemeMode;
   outlineVisible: boolean;
   outlineWidth: number;

@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { editorModeLabel, type EditorMode } from "../editor/editorMode";
 
 interface EditorModeSwitchProps {
@@ -10,18 +11,18 @@ export function EditorModeSwitch({ mode, onChange }: EditorModeSwitchProps) {
     <div
       className="editor-mode-switch"
       role="group"
-      aria-label="编辑模式"
-      title="切换编辑模式（Ctrl+Shift+E）"
+      aria-label={t("编辑模式")}
+      title={t("切换编辑模式（Ctrl+Shift+E）")}
     >
       {(["ir", "sv"] as const).map((value) => (
         <button
           key={value}
           className={mode === value ? "active" : ""}
           aria-pressed={mode === value}
-          title={`${editorModeLabel[value]}模式`}
+          title={t("{0}模式", t(editorModeLabel[value]))}
           onClick={() => onChange(value)}
         >
-          {editorModeLabel[value]}
+          {t(editorModeLabel[value])}
         </button>
       ))}
     </div>

@@ -1,3 +1,4 @@
+import { t, setLanguage, useLanguage, type Language } from "./i18n";
 import Vditor from "vditor";
 import {
   useCallback,
@@ -59,6 +60,7 @@ const recoveryIntervalMs = 15_000;
 const recoveryDebounceMs = 1_500;
 
 const defaultSettings: DesktopSettings = {
+  language: "zh_CN",
   theme: "system",
   outlineVisible: true,
   outlineWidth: defaultOutlineWidth,
@@ -67,13 +69,14 @@ const defaultSettings: DesktopSettings = {
 };
 
 export default function App() {
+  const language = useLanguage();
   const [document, setDocument] = useState<DocumentState>(
     createUntitledDocument,
   );
   const [documentResourceScope, setDocumentResourceScope] = useState(
     createDocumentResourceScope,
   );
-  const [status, setStatus] = useState("就绪");
+  const [status, setStatus] = useState(t("就绪"));
   const [settings, setSettings] = useState(defaultSettings);
   const [outlineWidth, setOutlineWidth] = useState(defaultOutlineWidth);
   const [settingsReady, setSettingsReady] = useState(false);
@@ -109,7 +112,7 @@ export default function App() {
     () => getMarkdownOutline(deferredOutlineContent),
     [deferredOutlineContent],
   );
-  const title = `${document.name}${document.dirty ? " *" : ""} — lw.MD`;
+  const title = `${document.path ? document.name : t("未命名")}${document.dirty ? " *" : ""} — lw.MD`;
   const hasPersistenceRisk =
     document.dirty || externalFileState.kind !== "none";
   const renewDocumentResourceScope = useCallback(() => {
@@ -144,7 +147,7 @@ export default function App() {
   const confirmDiscard = useCallback(
     () =>
       !hasPersistenceRisk ||
-      window.confirm("当前文档或磁盘文件存在未处理修改，确定放弃吗？"),
+      window.confirm(t("当前文档或磁盘文件存在未处理修改，确定放弃吗？")),
     [hasPersistenceRisk],
   );
   const setTheme = useCallback((theme: ThemeMode) => {
@@ -181,7 +184,7 @@ export default function App() {
     renewDocumentResourceScope();
     setExternalFileState({ kind: "none" });
     setConflictDialogOpen(false);
-    setStatus("新建文档");
+    setStatus(t("新建文档"));
   }, [confirmDiscard, renewDocumentResourceScope]);
   const open = useCallback(async () => {
     if (!confirmDiscard()) return;
@@ -189,7 +192,7 @@ export default function App() {
       const result = await desktop.file.open();
       if (result) {
         acceptDocument(result);
-        setStatus("已打开");
+        setStatus(t("已打开"));
       }
     } catch (error) {
       setStatus(errorMessage(error));
@@ -200,7 +203,7 @@ export default function App() {
       if (!path || !confirmDiscard()) return;
       try {
         acceptDocument(await desktop.file.read(path));
-        setStatus("已打开最近文件");
+        setStatus(t("已打开最近文件"));
       } catch (error) {
         setSettings((current) => ({
           ...current,
@@ -215,7 +218,7 @@ export default function App() {
     async (saveAs = false) => {
       if (!saveAs && externalFileState.kind !== "none") {
         setConflictDialogOpen(true);
-        setStatus("检测到文件冲突，请先选择处理方式");
+        setStatus(t("检测到文件冲突，请先选择处理方式"));
         return;
       }
       try {
@@ -230,11 +233,11 @@ export default function App() {
                 )
               : await desktop.file.saveAs(
                   document.content,
-                  document.name === "未命名" ? "未命名.md" : document.name,
+                  !document.path ? `${t("未命名")}.md` : document.name,
                 )
             : await desktop.file.saveAs(
                 document.content,
-                document.name === "未命名" ? "未命名.md" : document.name,
+                !document.path ? `${t("未命名")}.md` : document.name,
               );
         if (result) {
           void desktop.recovery.clear().catch(() => undefined);
@@ -256,7 +259,7 @@ export default function App() {
           if (previousPath !== result.path) {
             renewDocumentResourceScope();
           }
-          setStatus("已保存");
+          setStatus(t("已保存"));
         }
       } catch (error) {
         if (isBridgeErrorCode(error, "FILE_CONFLICT")) {
@@ -295,7 +298,7 @@ export default function App() {
     const current = documentRef.current;
     if (current.dirty) {
       const confirmed = window.confirm(
-        "重新加载将放弃当前未保存的修改，确定继续吗？",
+        t("重新加载将放弃当前未保存的修改，确定继续吗？"),
       );
       if (!confirmed) return;
     }
@@ -304,46 +307,57 @@ export default function App() {
     try {
       acceptDocument(await desktop.file.read(path));
       setConflictDialogOpen(false);
-      setStatus("已从磁盘重新加载");
+      setStatus(t("已从磁盘重新加载"));
     } catch (error) {
       setStatus(errorMessage(error));
     }
   }, [acceptDocument]);
   const continueWithCurrentContent = useCallback(() => {
     setConflictDialogOpen(false);
-    setStatus("继续编辑当前内容；保存前请先处理文件冲突");
+    setStatus(t("继续编辑当前内容；保存前请先处理文件冲突"));
   }, []);
   const exportPdf = useCallback(async () => {
     const target = printDocument.current;
     if (!target || exportingPdf) return;
     setExportingPdf(true);
-    setStatus("正在准备 PDF…");
+    setStatus(t("正在准备 PDF…"));
     try {
       await Vditor.preview(target, document.content, {
         cdn: "/vditor",
-        lang: "zh_CN",
+        lang: language,
         mode: "light",
         markdown: createDocumentMarkdownOptions(),
         render: { media: { enable: false } },
       });
       await waitForPrintAssets(target, documentResourceScope);
-      const result = await desktop.pdf.export(pdfName(document.name));
-      setStatus(result ? `PDF 已导出：${result.name}` : "已取消导出 PDF");
+      const result = await desktop.pdf.export(
+        pdfName(document.path ? document.name : t("未命名")),
+      );
+      setStatus(
+        result ? t("PDF 已导出：{0}", result.name) : t("已取消导出 PDF"),
+      );
     } catch (error) {
       setStatus(errorMessage(error));
     } finally {
       setExportingPdf(false);
     }
-  }, [document.content, document.name, documentResourceScope, exportingPdf]);
+  }, [
+    document.content,
+    document.name,
+    document.path,
+    documentResourceScope,
+    exportingPdf,
+    language,
+  ]);
   const savePastedImages = useCallback(
     async (files: File[]) => {
       if (!document.path) {
-        const message = "请先保存当前 Markdown 文件，再插入本地图片。";
+        const message = t("请先保存当前 Markdown 文件，再插入本地图片。");
         setStatus(message);
         window.alert(message);
         return [];
       }
-      setStatus("正在保存图片…");
+      setStatus(t("正在保存图片…"));
       try {
         const images: SavedImage[] = [];
         for (const file of files) {
@@ -355,7 +369,7 @@ export default function App() {
             ),
           );
         }
-        setStatus(`已插入 ${images.length} 张图片`);
+        setStatus(t("已插入 {0} 张图片", images.length));
         return images.map((image) => image.relativePath);
       } catch (error) {
         setStatus(errorMessage(error));
@@ -366,16 +380,18 @@ export default function App() {
   );
   const chooseImages = useCallback(async () => {
     if (!document.path) {
-      const message = "请先保存当前 Markdown 文件，再插入本地图片。";
+      const message = t("请先保存当前 Markdown 文件，再插入本地图片。");
       setStatus(message);
       window.alert(message);
       return [];
     }
-    setStatus("正在选择图片…");
+    setStatus(t("正在选择图片…"));
     try {
       const images = await desktop.image.choose(document.path);
       setStatus(
-        images.length > 0 ? `已插入 ${images.length} 张图片` : "已取消插入图片",
+        images.length > 0
+          ? t("已插入 {0} 张图片", images.length)
+          : t("已取消插入图片"),
       );
       return images.map((image) => image.relativePath);
     } catch (error) {
@@ -405,7 +421,7 @@ export default function App() {
         lastRecoverySnapshot.current = null;
       }
       if (!isDesktopUnavailable(error)) {
-        setStatus("恢复快照保存失败，将稍后重试");
+        setStatus(t("恢复快照保存失败，将稍后重试"));
       }
     });
   }, []);
@@ -431,7 +447,7 @@ export default function App() {
       setPendingRecovery(null);
       setConflictDialogOpen(false);
       setRecoveryReady(true);
-      setStatus("已恢复上次未保存的内容，请确认后保存");
+      setStatus(t("已恢复上次未保存的内容，请确认后保存"));
     } catch (error) {
       setStatus(errorMessage(error));
     }
@@ -439,7 +455,7 @@ export default function App() {
   const discardRecovery = useCallback(async () => {
     try {
       await desktop.recovery.clear();
-      setStatus("已放弃恢复快照");
+      setStatus(t("已放弃恢复快照"));
     } catch (error) {
       if (!isDesktopUnavailable(error)) setStatus(errorMessage(error));
     } finally {
@@ -470,13 +486,14 @@ export default function App() {
           ? settingsResult.value
           : defaultSettings;
       setSettings(loadedSettings);
+      setLanguage(loadedSettings.language ?? "zh_CN");
       setOutlineWidth(loadedSettings.outlineWidth);
       setSettingsReady(true);
 
       if (launchResult.status === "fulfilled") {
         if (launchResult.value) {
           acceptDocument(launchResult.value, false);
-          setStatus("已从 Windows 打开文件");
+          setStatus(t("已从 Windows 打开文件"));
         }
       } else if (!isDesktopUnavailable(launchResult.reason)) {
         setStatus(errorMessage(launchResult.reason));
@@ -561,15 +578,15 @@ export default function App() {
         const markdown = files.find((file) => file.kind === "markdown");
         if (markdown) {
           if (!confirmDiscard()) {
-            setStatus("已取消打开拖入文件");
+            setStatus(t("已取消打开拖入文件"));
             return;
           }
-          setStatus("正在打开拖入文件…");
+          setStatus(t("正在打开拖入文件…"));
           void desktop.drop
             .openMarkdown(markdown.id)
             .then((result) => {
               acceptDocument(result);
-              setStatus("已打开拖入文件");
+              setStatus(t("已打开拖入文件"));
             })
             .catch((error) => setStatus(errorMessage(error)));
           return;
@@ -579,12 +596,12 @@ export default function App() {
           .map((file) => file.id);
         if (imageIds.length === 0) return;
         if (!document.path) {
-          const message = "请先保存当前 Markdown 文件，再插入本地图片。";
+          const message = t("请先保存当前 Markdown 文件，再插入本地图片。");
           setStatus(message);
           window.alert(message);
           return;
         }
-        setStatus("正在导入图片…");
+        setStatus(t("正在导入图片…"));
         void desktop.drop
           .importImages(document.path, imageIds)
           .then((images) => {
@@ -593,7 +610,7 @@ export default function App() {
                 .map((image) => `![](<${image.relativePath}>)`)
                 .join("\n\n"),
             );
-            setStatus(`已插入 ${images.length} 张图片`);
+            setStatus(t("已插入 {0} 张图片", images.length));
           })
           .catch((error) => setStatus(errorMessage(error)));
       }),
@@ -734,7 +751,7 @@ export default function App() {
       <main className="boot-screen" role="status" aria-live="polite">
         <span className="boot-spinner" aria-hidden="true" />
         <strong>lw.MD</strong>
-        <span>正在准备编辑器…</span>
+        <span>{t("正在准备编辑器…")}</span>
       </main>
     );
   }
@@ -746,22 +763,22 @@ export default function App() {
       <header>
         <div className="menu">
           <button
-            title={`新建（${appShortcuts.newDocument.label}）`}
+            title={t("新建（{0}）", appShortcuts.newDocument.label)}
             onClick={createNew}
           >
-            新建
+            {t("新建")}
           </button>
           <button
-            title={`打开（${appShortcuts.open.label}）`}
+            title={t("打开（{0}）", appShortcuts.open.label)}
             onClick={() => void open()}
           >
-            打开
+            {t("打开")}
           </button>
           <button
-            title={`保存（${appShortcuts.save.label}）`}
+            title={t("保存（{0}）", appShortcuts.save.label)}
             onClick={() => void save()}
           >
-            保存
+            {t("保存")}
           </button>
           <details
             className="menu-dropdown"
@@ -770,41 +787,41 @@ export default function App() {
               event.currentTarget.removeAttribute("open")
             }
           >
-            <summary>文件</summary>
+            <summary>{t("文件")}</summary>
             <div className="menu-popover">
               <button className="menu-command" onClick={createNew}>
-                <span>新建</span>
+                <span>{t("新建")}</span>
                 <kbd>{appShortcuts.newDocument.label}</kbd>
               </button>
               <button className="menu-command" onClick={() => void open()}>
-                <span>打开…</span>
+                <span>{t("打开…")}</span>
                 <kbd>{appShortcuts.open.label}</kbd>
               </button>
               <button className="menu-command" onClick={() => void save()}>
-                <span>保存</span>
+                <span>{t("保存")}</span>
                 <kbd>{appShortcuts.save.label}</kbd>
               </button>
               <button className="menu-command" onClick={() => void save(true)}>
-                <span>另存为…</span>
+                <span>{t("另存为…")}</span>
                 <kbd>{appShortcuts.saveAs.label}</kbd>
               </button>
               <div className="menu-separator" />
               <button disabled={exportingPdf} onClick={() => void exportPdf()}>
-                {exportingPdf ? "正在导出…" : "导出 PDF"}
+                {exportingPdf ? t("正在导出…") : t("导出 PDF")}
               </button>
               <button onClick={() => setAssociationOpen(true)}>
-                Windows 集成…
+                {t("Windows 集成…")}
               </button>
               {settings.recentFiles.length > 0 && (
                 <label>
-                  最近文件
+                  {t("最近文件")}
                   <select
                     className="recent-select"
                     value=""
                     onChange={(event) => void openRecent(event.target.value)}
-                    aria-label="最近文件"
+                    aria-label={t("最近文件")}
                   >
-                    <option value="">请选择</option>
+                    <option value="">{t("请选择")}</option>
                     {settings.recentFiles.map((path) => (
                       <option key={path} value={path}>
                         {fileNameFromPath(path)}
@@ -822,14 +839,14 @@ export default function App() {
               event.currentTarget.removeAttribute("open")
             }
           >
-            <summary>编辑</summary>
+            <summary>{t("编辑")}</summary>
             <div className="menu-popover edit-menu-popover">
               <button onClick={() => setFindMode("find")}>
-                <span>查找</span>
+                <span>{t("查找")}</span>
                 <kbd>Ctrl+F</kbd>
               </button>
               <button onClick={() => setFindMode("replace")}>
-                <span>替换</span>
+                <span>{t("替换")}</span>
                 <kbd>Ctrl+H</kbd>
               </button>
             </div>
@@ -842,7 +859,7 @@ export default function App() {
               event.currentTarget.removeAttribute("open")
             }
           >
-            <summary>视图</summary>
+            <summary>{t("视图")}</summary>
             <div className="menu-popover view-menu-popover">
               <button
                 onClick={() => {
@@ -850,16 +867,16 @@ export default function App() {
                   closeViewMenu();
                 }}
               >
-                {settings.outlineVisible ? "隐藏大纲" : "显示大纲"}
+                {settings.outlineVisible ? t("隐藏大纲") : t("显示大纲")}
               </button>
               <div className="menu-separator" />
               <div className="menu-section">
-                <div className="menu-section-title">主题</div>
+                <div className="menu-section-title">{t("主题")}</div>
                 {(
                   [
-                    ["system", "跟随系统"],
-                    ["light", "浅色"],
-                    ["dark", "深色"],
+                    ["system", t("跟随系统")],
+                    ["light", t("浅色")],
+                    ["dark", t("深色")],
                   ] as const
                 ).map(([value, label]) => (
                   <button
@@ -878,7 +895,7 @@ export default function App() {
               <div className="menu-separator" />
               <div className="menu-section">
                 <div className="menu-section-title">
-                  <span>编辑模式</span>
+                  <span>{t("编辑模式")}</span>
                   <kbd>Ctrl+Shift+E</kbd>
                 </div>
                 {(["ir", "sv"] as const).map((value) => (
@@ -894,7 +911,37 @@ export default function App() {
                     <span className="menu-check" aria-hidden="true">
                       {settings.editorMode === value ? "✓" : ""}
                     </span>
-                    <span>{editorModeLabel[value]}</span>
+                    <span>{t(editorModeLabel[value])}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="menu-separator" />
+              <div className="menu-section">
+                <div className="menu-section-title">语言 / Language</div>
+                {(
+                  [
+                    ["zh_CN", "简体中文"],
+                    ["en_US", "English"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    className="menu-choice"
+                    aria-pressed={language === value}
+                    onClick={() => {
+                      setLanguage(value as Language);
+                      setSettings((current) => ({
+                        ...current,
+                        language: value,
+                      }));
+                      setStatus(t("就绪"));
+                      closeViewMenu();
+                    }}
+                  >
+                    <span className="menu-check" aria-hidden="true">
+                      {language === value ? "✓" : ""}
+                    </span>
+                    <span>{label}</span>
                   </button>
                 ))}
               </div>
@@ -908,7 +955,7 @@ export default function App() {
             className="about-menu-button"
             onClick={() => setAboutOpen(true)}
           >
-            关于
+            {t("关于")}
           </button>
         </div>
       </header>
@@ -964,9 +1011,11 @@ export default function App() {
         />
       </section>
       <footer>
-        <span>{document.content.length} 字符</span>
-        <span>{editorModeLabel[settings.editorMode]}</span>
-        <span>{document.dirty ? "未保存" : "已保存"}</span>
+        <span>
+          {document.content.length} {t("字符")}
+        </span>
+        <span>{t(editorModeLabel[settings.editorMode])}</span>
+        <span>{document.dirty ? t("未保存") : t("已保存")}</span>
         <span>{status}</span>
       </footer>
       {pendingRecovery && (
@@ -1017,11 +1066,11 @@ async function fileBase64(file: File) {
     reader.addEventListener("load", () => {
       const result = String(reader.result ?? "");
       const separator = result.indexOf(",");
-      if (separator < 0) reject(new Error("无法读取图片数据"));
+      if (separator < 0) reject(new Error(t("无法读取图片数据")));
       else resolve(result.slice(separator + 1));
     });
     reader.addEventListener("error", () =>
-      reject(new Error("无法读取图片数据")),
+      reject(new Error(t("无法读取图片数据"))),
     );
     reader.readAsDataURL(file);
   });

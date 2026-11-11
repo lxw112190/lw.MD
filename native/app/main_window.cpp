@@ -25,14 +25,14 @@ constexpr UINT kInitializeWebViewMessage = WM_APP + 1;
 struct State {
   std::unique_ptr<WebViewHost> webview;
   std::unique_ptr<BridgeDispatcher> bridge;
-  std::wstring loading_text = L"正在启动 lw.MD…";
+  std::wstring loading_text = UiText(L"正在启动 lw.MD…", L"Starting lw.MD…");
   bool maximized = false;
 };
 void OpenDroppedFiles(HWND window, State& state,
                       const std::vector<std::filesystem::path>& dropped_paths) {
   const auto grants = state.bridge->GrantDroppedFiles(dropped_paths);
   if (grants.empty()) {
-    MessageBoxW(window, L"请拖入 Markdown 文件或图片。", L"lw.MD", MB_OK | MB_ICONINFORMATION);
+    MessageBoxW(window, UiText(L"请拖入 Markdown 文件或图片。", L"Drop a Markdown file or image."), L"lw.MD", MB_OK | MB_ICONINFORMATION);
     return;
   }
   auto files = nlohmann::json::array();
@@ -133,7 +133,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
       if (launch_path && *launch_path) {
         owned->bridge->SetLaunchDocumentPath(**launch_path);
         owned->loading_text =
-            L"正在打开 " +
+            UiText(L"正在打开 ", L"Opening ") +
             std::filesystem::path(**launch_path).filename().wstring() + L"…";
       }
       state = owned.release(); SetWindowLongPtrW(window, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(state));
@@ -158,7 +158,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
       FillRect(context, &bounds, GetSysColorBrush(COLOR_WINDOW));
       SetBkMode(context, TRANSPARENT);
       SetTextColor(context, GetSysColor(COLOR_WINDOWTEXT));
-      const auto text = state ? state->loading_text : L"正在启动 lw.MD…";
+      const auto text = state ? state->loading_text : UiText(L"正在启动 lw.MD…", L"Starting lw.MD…");
       DrawTextW(context, text.c_str(), -1, &bounds,
                 DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
       EndPaint(window, &paint);
@@ -197,8 +197,8 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
       return 0;
     case WM_CLOSE:
       if (GetPropW(window, kDirtyDocumentProperty)) {
-        if (MessageBoxW(window, L"当前文档有尚未保存的修改。\n\n确定退出并放弃这些修改吗？",
-                        L"lw.MD — 未保存", MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2) != IDYES) return 0;
+        if (MessageBoxW(window, UiText(L"当前文档有尚未保存的修改。\n\n确定退出并放弃这些修改吗？", L"This document has unsaved changes.\n\nExit and discard them?"),
+                        UiText(L"lw.MD — 未保存", L"lw.MD — Unsaved"), MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2) != IDYES) return 0;
         try { ClearRecoverySnapshot(); }
         catch (...) {}
       }
@@ -226,7 +226,7 @@ int RunMainWindow(HINSTANCE instance,
   std::optional<SavedWindowState> restored;
   try { restored = LoadWindowState(); }
   catch (...) {}
-  std::wstring initial_title = L"lw.MD — 简墨";
+  std::wstring initial_title = UiText(L"lw.MD — 简墨", L"lw.MD — Jianmo");
   if (launch_path) {
     initial_title =
         std::filesystem::path(*launch_path).filename().wstring() + L" — lw.MD";

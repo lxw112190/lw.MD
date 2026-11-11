@@ -1,3 +1,4 @@
+#include "settings/settings.h"
 #include "dialogs/file_dialog.h"
 #include <ShObjIdl.h>
 #include <filesystem>
@@ -26,7 +27,7 @@ std::optional<std::wstring> ChooseMarkdownFile(HWND owner) {
   IFileOpenDialog* dialog = nullptr;
   if (FAILED(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&dialog)))) return std::nullopt;
   const COMDLG_FILTERSPEC types[] = {{L"Markdown (*.md;*.markdown)", L"*.md;*.markdown"}, {L"All Files (*.*)", L"*.*"}};
-  Configure(dialog, L"打开 Markdown 文件", types, static_cast<UINT>(std::size(types)));
+  Configure(dialog, UiText(L"打开 Markdown 文件", L"Open Markdown file"), types, static_cast<UINT>(std::size(types)));
   const HRESULT shown = dialog->Show(owner);
   const auto result = shown == HRESULT_FROM_WIN32(ERROR_CANCELLED) ? std::nullopt : (SUCCEEDED(shown) ? ResultPath(dialog) : std::nullopt);
   dialog->Release(); return result;
@@ -39,9 +40,9 @@ std::optional<std::vector<std::wstring>> ChooseImageFiles(HWND owner) {
     return std::nullopt;
   }
   const COMDLG_FILTERSPEC types[] = {
-      {L"图片文件", L"*.png;*.jpg;*.jpeg;*.gif;*.webp;*.bmp;*.svg"},
-      {L"所有文件 (*.*)", L"*.*"}};
-  Configure(dialog, L"插入图片", types, static_cast<UINT>(std::size(types)));
+      {UiText(L"图片文件", L"Image files"), L"*.png;*.jpg;*.jpeg;*.gif;*.webp;*.bmp;*.svg"},
+      {UiText(L"所有文件 (*.*)", L"All files (*.*)"), L"*.*"}};
+  Configure(dialog, UiText(L"插入图片", L"Insert images"), types, static_cast<UINT>(std::size(types)));
   DWORD options{};
   if (SUCCEEDED(dialog->GetOptions(&options))) {
     dialog->SetOptions(options | FOS_ALLOWMULTISELECT | FOS_FILEMUSTEXIST);
@@ -91,7 +92,7 @@ std::optional<std::wstring> ChooseMarkdownSavePath(HWND owner, const std::wstrin
   IFileSaveDialog* dialog = nullptr;
   if (FAILED(CoCreateInstance(CLSID_FileSaveDialog, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&dialog)))) return std::nullopt;
   const COMDLG_FILTERSPEC types[] = {{L"Markdown (*.md;*.markdown)", L"*.md;*.markdown"}, {L"All Files (*.*)", L"*.*"}};
-  Configure(dialog, L"另存为 Markdown 文件", types, static_cast<UINT>(std::size(types))); dialog->SetFileName(suggested_name.empty() ? L"未命名.md" : suggested_name.c_str()); dialog->SetDefaultExtension(L"md");
+  Configure(dialog, UiText(L"另存为 Markdown 文件", L"Save Markdown as"), types, static_cast<UINT>(std::size(types))); dialog->SetFileName(suggested_name.empty() ? UiText(L"未命名.md", L"Untitled.md") : suggested_name.c_str()); dialog->SetDefaultExtension(L"md");
   const HRESULT shown = dialog->Show(owner);
   const auto result = shown == HRESULT_FROM_WIN32(ERROR_CANCELLED) ? std::nullopt : (SUCCEEDED(shown) ? ResultPath(dialog) : std::nullopt);
   dialog->Release(); return result;
@@ -100,9 +101,9 @@ std::optional<std::wstring> ChoosePdfSavePath(HWND owner, const std::wstring& su
   IFileSaveDialog* dialog = nullptr;
   if (FAILED(CoCreateInstance(CLSID_FileSaveDialog, nullptr, CLSCTX_INPROC_SERVER,
                               IID_PPV_ARGS(&dialog)))) return std::nullopt;
-  const COMDLG_FILTERSPEC types[] = {{L"PDF 文档 (*.pdf)", L"*.pdf"}};
-  Configure(dialog, L"导出 PDF", types, static_cast<UINT>(std::size(types)));
-  dialog->SetFileName(suggested_name.empty() ? L"未命名.pdf" : suggested_name.c_str());
+  const COMDLG_FILTERSPEC types[] = {{UiText(L"PDF 文档 (*.pdf)", L"PDF documents (*.pdf)"), L"*.pdf"}};
+  Configure(dialog, UiText(L"导出 PDF", L"Export PDF"), types, static_cast<UINT>(std::size(types)));
+  dialog->SetFileName(suggested_name.empty() ? UiText(L"未命名.pdf", L"Untitled.pdf") : suggested_name.c_str());
   dialog->SetDefaultExtension(L"pdf");
   const HRESULT shown = dialog->Show(owner);
   const auto result = shown == HRESULT_FROM_WIN32(ERROR_CANCELLED)

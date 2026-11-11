@@ -1,3 +1,4 @@
+#include "settings/settings.h"
 #include "app/command_line.h"
 #include "app/main_window.h"
 #include <Windows.h>
@@ -14,7 +15,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
     launch_path = ResolveLaunchMarkdownPath(arguments[1]);
     if (!launch_path) {
       MessageBoxW(nullptr,
-                  L"无法打开指定文件。\n\n请确认文件存在，并且扩展名为 .md 或 .markdown。",
+                  UiText(L"无法打开指定文件。\n\n请确认文件存在，并且扩展名为 .md 或 .markdown。", L"Unable to open this file.\n\nCheck that it exists and has a .md or .markdown extension."),
                   L"lw.MD", MB_OK | MB_ICONERROR);
       LocalFree(arguments);
       return 1;

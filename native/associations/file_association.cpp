@@ -1,3 +1,4 @@
+#include "settings/settings.h"
 #include "associations/file_association.h"
 
 #include <Shellapi.h>
@@ -227,29 +228,29 @@ void RegisterMarkdownFileAssociations() {
   const auto command = BuildAssociationOpenCommand(executable);
   const auto icon = L"\"" + executable + L"\",0";
 
-  SetStringValue(kApplicationKey, L"FriendlyAppName", L"lw.MD 简墨");
+  SetStringValue(kApplicationKey, L"FriendlyAppName", UiText(L"lw.MD 简墨", L"lw.MD Jianmo"));
   SetStringValue(Join(kApplicationKey, L"DefaultIcon"), nullptr, icon);
   for (const auto* extension : kExtensions) {
     SetStringValue(Join(kApplicationKey, L"SupportedTypes"), extension, L"");
   }
   SetStringValue(ApplicationCommandKey(), nullptr, command);
 
-  SetStringValue(kProgIdKey, nullptr, L"lw.MD Markdown 文档");
+  SetStringValue(kProgIdKey, nullptr, UiText(L"lw.MD Markdown 文档", L"lw.MD Markdown document"));
   SetStringValue(Join(kProgIdKey, L"DefaultIcon"), nullptr, icon);
   SetStringValue(ProgIdCommandKey(), nullptr, command);
 
   for (const auto* extension : kExtensions) {
     SetNoneValue(OpenWithProgIdsKey(extension), kProgId);
     const auto verb = RightClickVerbKey(extension);
-    SetStringValue(verb, L"MUIVerb", L"使用 lw.MD 打开");
+    SetStringValue(verb, L"MUIVerb", UiText(L"使用 lw.MD 打开", L"Open with lw.MD"));
     SetStringValue(verb, L"Icon", icon);
     SetStringValue(verb, L"MultiSelectModel", L"Single");
     SetStringValue(RightClickCommandKey(extension), nullptr, command);
   }
 
-  SetStringValue(kCapabilitiesKey, L"ApplicationName", L"lw.MD 简墨");
+  SetStringValue(kCapabilitiesKey, L"ApplicationName", UiText(L"lw.MD 简墨", L"lw.MD Jianmo"));
   SetStringValue(kCapabilitiesKey, L"ApplicationDescription",
-                 L"简洁轻量的本地 Markdown 编辑器");
+                 UiText(L"简洁轻量的本地 Markdown 编辑器", L"A clean, lightweight local Markdown editor"));
   for (const auto* extension : kExtensions) {
     SetStringValue(CapabilitiesAssociationsKey(), extension, kProgId);
   }

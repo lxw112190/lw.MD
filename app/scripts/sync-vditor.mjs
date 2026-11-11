@@ -50,7 +50,7 @@ if (!configuredMathResources) {
 }
 
 const configuredResources = [
-  `js/i18n/${runtime.locale}.js`,
+  ...runtime.locales.map((locale) => `js/i18n/${locale}.js`),
   `js/icons/${runtime.icon}.js`,
   ...Object.values(runtime.themes).flatMap((theme) => [
     `css/content-theme/${theme.content}.css`,

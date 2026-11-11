@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 export interface BridgeError {
   code: string;
   message: string;
@@ -99,7 +100,7 @@ export function invoke<T>(method: string, params?: unknown): Promise<T> {
   if (!webview)
     return Promise.reject({
       code: "DESKTOP_UNAVAILABLE",
-      message: "请在 lw.MD 桌面应用中使用文件操作。",
+      message: t("请在 lw.MD 桌面应用中使用文件操作。"),
     } satisfies BridgeError);
   const id = `req-${Date.now()}-${++sequence}`;
   return new Promise<T>((resolve, reject) => {
@@ -107,7 +108,7 @@ export function invoke<T>(method: string, params?: unknown): Promise<T> {
       pending.delete(id);
       reject({
         code: "BRIDGE_TIMEOUT",
-        message: "桌面操作等待超时，请重试。",
+        message: t("桌面操作等待超时，请重试。"),
       } satisfies BridgeError);
     }, bridgeTimeoutMs);
     pending.set(id, {
@@ -122,7 +123,7 @@ export function invoke<T>(method: string, params?: unknown): Promise<T> {
       pending.delete(id);
       reject({
         code: "BRIDGE_SEND_FAILED",
-        message: "无法发送桌面操作请求。",
+        message: t("无法发送桌面操作请求。"),
       } satisfies BridgeError);
     }
   });

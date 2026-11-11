@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { useRef } from "react";
 import type { OutlineItem } from "../markdown/outline";
 
@@ -48,9 +49,9 @@ export function OutlinePanel({
   };
 
   return (
-    <aside className="outline-panel" aria-label="文档大纲" ref={panel}>
+    <aside className="outline-panel" aria-label={t("文档大纲")} ref={panel}>
       <div className="outline-scroll">
-        <div className="outline-title">大纲</div>
+        <div className="outline-title">{t("大纲")}</div>
         {items.length ? (
           <nav>
             {items.map((item, index) => (
@@ -58,7 +59,7 @@ export function OutlinePanel({
                 className="outline-item"
                 key={`${item.line}-${item.text}`}
                 style={{ paddingLeft: `${12 + (item.level - 1) * 13}px` }}
-                title={`${item.text}（第 ${item.line} 行）`}
+                title={t("{0}（第 {1} 行）", item.text, item.line)}
                 onClick={() => onSelect(item, index)}
               >
                 {item.text}
@@ -66,13 +67,13 @@ export function OutlinePanel({
             ))}
           </nav>
         ) : (
-          <p>使用标题来组织文章。</p>
+          <p>{t("使用标题来组织文章。")}</p>
         )}
       </div>
       <div
         className="outline-resize-handle"
         role="separator"
-        aria-label="调整大纲宽度"
+        aria-label={t("调整大纲宽度")}
         aria-orientation="vertical"
         aria-valuemin={minOutlineWidth}
         aria-valuemax={maxOutlineWidth}

@@ -178,6 +178,14 @@ int TestFrontendCacheCleanup(const std::filesystem::path& test_root) {
 }  // namespace
 
 int main() {
+  if (std::string(DefaultUiLanguage(0x0409, true)) != "zh_CN" ||
+      std::string(DefaultUiLanguage(0x0804, false)) != "zh_CN" ||
+      std::string(DefaultUiLanguage(0x0404, false)) != "zh_CN" ||
+      std::string(DefaultUiLanguage(0x0409, false)) != "en_US") return 50;
+  const SavedWindowState language_test_window{};
+  if (SaveWindowState(nlohmann::json::object(), language_test_window).at("language") != "zh_CN") return 51;
+  if (SaveWindowState(nlohmann::json{{"language", "en_US"}}, language_test_window).at("language") != "en_US") return 52;
+  if (SaveWindowState(nlohmann::json{{"language", 42}}, language_test_window).at("language") != "zh_CN") return 53;
   if (ScaleDpiValue(1180, 96, 144) != 1770) return 20;
   if (ScaleDpiValue(1770, 144, 96) != 1180) return 21;
   if (const auto window_state_result = TestWindowStateRoundTrip()) {

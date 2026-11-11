@@ -37,6 +37,10 @@ Use a fenced code block with the `mermaid` language for diagrams. Use `$E=mc^2$`
 
 ## Quick Start
 
+The interface supports Simplified Chinese and English. Select **View → 语言 / Language** to change and remember your choice.
+Upgrading existing settings preserves Chinese. On first launch, Chinese Windows defaults to Chinese; other system languages default to English.
+System-provided file dialog buttons follow the Windows display language.
+
 1. Download the latest `lw.MD-windows-x64.zip` from [Releases](https://github.com/lxw112190/lw.MD/releases).
 2. Extract the archive and run `lw.MD.exe`.
 3. Select **Open**, or drag a Markdown file into the window.

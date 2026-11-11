@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { useEffect, useState } from "react";
 import { desktop, type FileAssociationStatus } from "../desktop/desktop";
 import { errorMessage } from "../desktop/errors";
@@ -44,7 +45,9 @@ export function WindowsIntegrationDialog({
       await desktop.association[action]();
       setInfo(await desktop.association.status());
       onStatus(
-        action === "register" ? "Windows 集成已注册" : "Windows 集成已取消",
+        action === "register"
+          ? t("Windows 集成已注册")
+          : t("Windows 集成已取消"),
       );
     } catch (error) {
       onStatus(errorMessage(error));
@@ -56,7 +59,7 @@ export function WindowsIntegrationDialog({
   const openDefaultApps = async () => {
     try {
       await desktop.association.openDefaultApps();
-      onStatus("已打开 Windows 默认应用设置");
+      onStatus(t("已打开 Windows 默认应用设置"));
     } catch (error) {
       onStatus(errorMessage(error));
     }
@@ -77,8 +80,8 @@ export function WindowsIntegrationDialog({
       >
         <div className="association-heading">
           <div>
-            <h2 id="association-title">Windows 集成</h2>
-            <p>让 Markdown 文件更方便地使用 lw.MD 打开。</p>
+            <h2 id="association-title">{t("Windows 集成")}</h2>
+            <p>{t("让 Markdown 文件更方便地使用 lw.MD 打开。")}</p>
           </div>
           <span
             className={`association-status ${
@@ -90,28 +93,29 @@ export function WindowsIntegrationDialog({
             }`}
           >
             {!info
-              ? "正在检查"
+              ? t("正在检查")
               : info.current
-                ? "已注册"
+                ? t("已注册")
                 : info.registered
-                  ? "需要修复"
-                  : "未注册"}
+                  ? t("需要修复")
+                  : t("未注册")}
           </span>
         </div>
         <ul className="association-features">
-          <li>右键菜单显示“使用 lw.MD 打开”</li>
-          <li>在 Windows“打开方式”中显示 lw.MD</li>
-          <li>支持 .md 和 .markdown 文件</li>
+          <li>{t("右键菜单显示“使用 lw.MD 打开”")}</li>
+          <li>{t("在 Windows“打开方式”中显示 lw.MD")}</li>
+          <li>{t("支持 .md 和 .markdown 文件")}</li>
         </ul>
         <p className="association-note">
-          注册不会修改当前默认应用。如需默认使用 lw.MD，请在 Windows
-          设置中自行选择。
+          {t(
+            "注册不会修改当前默认应用。如需默认使用 lw.MD，请在 Windows 设置中自行选择。",
+          )}
         </p>
         {info?.registered && !info.current && (
           <div className="association-path-warning">
-            <strong>检测到程序位置发生变化</strong>
+            <strong>{t("检测到程序位置发生变化")}</strong>
             <span title={info.registeredExecutablePath ?? ""}>
-              {info.registeredExecutablePath || "原注册路径不可用"}
+              {info.registeredExecutablePath || t("原注册路径不可用")}
             </span>
           </div>
         )}
@@ -120,12 +124,12 @@ export function WindowsIntegrationDialog({
             disabled={!info?.current || busy}
             onClick={() => void openDefaultApps()}
           >
-            默认应用设置…
+            {t("默认应用设置…")}
           </button>
           <span />
           {info?.registered && (
             <button disabled={busy} onClick={() => void update("unregister")}>
-              取消注册
+              {t("取消注册")}
             </button>
           )}
           {!info?.current && (
@@ -135,14 +139,14 @@ export function WindowsIntegrationDialog({
               onClick={() => void update("register")}
             >
               {busy
-                ? "正在处理…"
+                ? t("正在处理…")
                 : info?.registered
-                  ? "修复关联"
-                  : "注册 Windows 集成"}
+                  ? t("修复关联")
+                  : t("注册 Windows 集成")}
             </button>
           )}
           <button disabled={busy} onClick={onClose}>
-            完成
+            {t("完成")}
           </button>
         </div>
       </section>

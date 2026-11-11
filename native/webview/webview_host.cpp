@@ -1,3 +1,4 @@
+#include "settings/settings.h"
 #include "webview/webview_host.h"
 #include "common/utf8.h"
 #include <ShlObj.h>
@@ -138,7 +139,7 @@ void WebViewHost::Create(HWND window, const std::wstring& content_folder,
                                       std::move(on_file_drag_state));
   const auto user_data = UserDataFolder();
   CreateCoreWebView2EnvironmentWithOptions(nullptr, user_data.c_str(), nullptr, Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>([this, content_folder](HRESULT result, ICoreWebView2Environment* environment) -> HRESULT {
-    if (FAILED(result) || !environment) { MessageBoxW(window_, L"未找到 WebView2 Runtime。请安装 Microsoft Edge WebView2 Evergreen Runtime。", L"lw.MD", MB_OK | MB_ICONERROR); return result; }
+    if (FAILED(result) || !environment) { MessageBoxW(window_, UiText(L"未找到 WebView2 Runtime。请安装 Microsoft Edge WebView2 Evergreen Runtime。", L"WebView2 Runtime was not found. Install Microsoft Edge WebView2 Evergreen Runtime."), L"lw.MD", MB_OK | MB_ICONERROR); return result; }
     environment_ = environment;
     environment->QueryInterface(IID_PPV_ARGS(&print_environment_));
     return environment->CreateCoreWebView2Controller(window_, Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>([this, content_folder](HRESULT status, ICoreWebView2Controller* controller) -> HRESULT {

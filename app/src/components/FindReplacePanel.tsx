@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import type { MarkdownEditorHandle } from "./MarkdownEditor";
 import {
@@ -72,7 +73,7 @@ export function FindReplacePanel({
   const revealMatch = (requestedIndex: number) => {
     if (matches.length === 0) {
       setActiveMatch(0);
-      onStatus(findQuery ? "未找到匹配内容" : "请输入要查找的内容");
+      onStatus(findQuery ? t("未找到匹配内容") : t("请输入要查找的内容"));
       return;
     }
     const nextIndex = (requestedIndex + matches.length) % matches.length;
@@ -80,15 +81,15 @@ export function FindReplacePanel({
     const visible = editor.current?.revealText(findQuery, nextIndex, matchCase);
     onStatus(
       visible
-        ? `第 ${nextIndex + 1} 项，共 ${matches.length} 项`
-        : `找到 ${matches.length} 项，当前结果不在可见文本中`,
+        ? t("第 {0} 项，共 {1} 项", nextIndex + 1, matches.length)
+        : t("找到 {0} 项，当前结果不在可见文本中", matches.length),
     );
   };
 
   const replaceCurrent = () => {
     const match = matches[currentMatchIndex];
     if (!match) {
-      onStatus(findQuery ? "未找到匹配内容" : "请输入要查找的内容");
+      onStatus(findQuery ? t("未找到匹配内容") : t("请输入要查找的内容"));
       return;
     }
     const nextContent = replaceTextMatch(content, match, replacement);
@@ -99,7 +100,7 @@ export function FindReplacePanel({
       Math.max(0, nextMatches.length - 1),
     );
     setActiveMatch(nextIndex);
-    onStatus("已替换 1 处");
+    onStatus(t("已替换 1 处"));
     window.setTimeout(() => {
       if (nextMatches.length > 0) {
         editor.current?.revealText(findQuery, nextIndex, matchCase);
@@ -110,22 +111,22 @@ export function FindReplacePanel({
   const replaceEveryMatch = () => {
     const result = replaceAllText(content, findQuery, replacement, matchCase);
     if (result.count === 0) {
-      onStatus(findQuery ? "未找到匹配内容" : "请输入要查找的内容");
+      onStatus(findQuery ? t("未找到匹配内容") : t("请输入要查找的内容"));
       return;
     }
     onChange(result.content);
     setActiveMatch(0);
-    onStatus(`已替换 ${result.count} 处`);
+    onStatus(t("已替换 {0} 处", result.count));
   };
 
   return (
-    <section className="find-panel" role="search" aria-label="查找和替换">
+    <section className="find-panel" role="search" aria-label={t("查找和替换")}>
       <div className="find-row">
         <input
           ref={findInput}
           value={findQuery}
-          placeholder="查找"
-          aria-label="查找内容"
+          placeholder={t("查找")}
+          aria-label={t("查找内容")}
           onChange={(event) => {
             setFindQuery(event.target.value);
             setActiveMatch(0);
@@ -142,24 +143,24 @@ export function FindReplacePanel({
         </span>
         <button
           className="find-icon-button"
-          title="上一个（Shift+Enter）"
-          aria-label="上一个匹配项"
+          title={t("上一个（Shift+Enter）")}
+          aria-label={t("上一个匹配项")}
           onClick={() => revealMatch(currentMatchIndex - 1)}
         >
           ↑
         </button>
         <button
           className="find-icon-button"
-          title="下一个（Enter）"
-          aria-label="下一个匹配项"
+          title={t("下一个（Enter）")}
+          aria-label={t("下一个匹配项")}
           onClick={() => revealMatch(currentMatchIndex + 1)}
         >
           ↓
         </button>
         <button
           className="find-icon-button find-close"
-          title="关闭（Esc）"
-          aria-label="关闭查找"
+          title={t("关闭（Esc）")}
+          aria-label={t("关闭查找")}
           onClick={close}
         >
           ×
@@ -169,8 +170,8 @@ export function FindReplacePanel({
         <div className="find-row replace-row">
           <input
             value={replacement}
-            placeholder="替换为"
-            aria-label="替换内容"
+            placeholder={t("替换为")}
+            aria-label={t("替换内容")}
             onChange={(event) => setReplacement(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
@@ -179,8 +180,8 @@ export function FindReplacePanel({
               }
             }}
           />
-          <button onClick={replaceCurrent}>替换</button>
-          <button onClick={replaceEveryMatch}>全部替换</button>
+          <button onClick={replaceCurrent}>{t("替换")}</button>
+          <button onClick={replaceEveryMatch}>{t("全部替换")}</button>
         </div>
       )}
       <div className="find-options">
@@ -188,7 +189,7 @@ export function FindReplacePanel({
           className="find-replace-toggle"
           onClick={() => onReplaceVisibleChange(!replaceVisible)}
         >
-          {replaceVisible ? "收起替换" : "展开替换"}
+          {replaceVisible ? t("收起替换") : t("展开替换")}
         </button>
         <label>
           <input
@@ -196,7 +197,7 @@ export function FindReplacePanel({
             checked={matchCase}
             onChange={(event) => setMatchCase(event.target.checked)}
           />
-          区分大小写
+          {t("区分大小写")}
         </label>
       </div>
     </section>
