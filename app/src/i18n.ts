@@ -20,6 +20,7 @@ export function useLanguage() {
   }, getLanguage);
 }
 export const english: Record<string, string> = {
+  "设置保存失败：{0}": "Unable to save settings: {0}",
   "无法获取 lw.MD.exe 路径": "Unable to locate lw.MD.exe",
   "lw.MD.exe 路径过长": "The lw.MD.exe path is too long",
   "无法更新 Windows 文件关联": "Unable to update Windows file associations",

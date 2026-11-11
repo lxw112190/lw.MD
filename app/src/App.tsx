@@ -80,6 +80,7 @@ export default function App() {
   const [settings, setSettings] = useState(defaultSettings);
   const [outlineWidth, setOutlineWidth] = useState(defaultOutlineWidth);
   const [settingsReady, setSettingsReady] = useState(false);
+  const [languageBusy, setLanguageBusy] = useState(false);
   const [bootReady, setBootReady] = useState(false);
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -618,7 +619,9 @@ export default function App() {
   );
   useEffect(() => {
     if (!settingsReady) return;
-    void desktop.app.setSettings(settings).catch(() => undefined);
+    void desktop.app.setSettings(settings).catch((error) => {
+      setStatus(t("设置保存失败：{0}", errorMessage(error)));
+    });
   }, [settings, settingsReady]);
   useEffect(() => {
     void desktop.app.setDirty(hasPersistenceRisk).catch(() => undefined);
@@ -928,14 +931,30 @@ export default function App() {
                     key={value}
                     className="menu-choice"
                     aria-pressed={language === value}
-                    onClick={() => {
-                      setLanguage(value as Language);
-                      setSettings((current) => ({
-                        ...current,
-                        language: value,
-                      }));
-                      setStatus(t("就绪"));
-                      closeViewMenu();
+                    disabled={languageBusy}
+                    onClick={async () => {
+                      if (languageBusy) return;
+                      setLanguageBusy(true);
+                      try {
+                        const next = { ...settings, language: value };
+                        await desktop.app.setSettings(next);
+                        setLanguage(value as Language);
+                        setSettings((current) => ({
+                          ...current,
+                          language: value,
+                        }));
+                        setStatus(t("就绪"));
+                        closeViewMenu();
+                      } catch (error) {
+                        const message = t(
+                          "设置保存失败：{0}",
+                          errorMessage(error),
+                        );
+                        setStatus(message);
+                        window.alert(message);
+                      } finally {
+                        setLanguageBusy(false);
+                      }
                     }}
                   >
                     <span className="menu-check" aria-hidden="true">

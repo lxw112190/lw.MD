@@ -69,7 +69,14 @@ export const desktop = {
     quit: () => invoke<void>("app.quit"),
     getSettings: () => invoke<DesktopSettings>("app.getSettings"),
     setSettings: (settings: DesktopSettings) =>
-      invoke<void>("app.setSettings", settings),
+      invoke<void>("app.setSettings", {
+        language: settings.language,
+        theme: settings.theme,
+        outlineVisible: settings.outlineVisible,
+        outlineWidth: settings.outlineWidth,
+        recentFiles: settings.recentFiles,
+        editorMode: settings.editorMode,
+      }),
     setDirty: (dirty: boolean) => invoke<void>("app.setDirty", { dirty }),
     setTitle: (title: string) => invoke<void>("app.setTitle", { title }),
     openExternal: (url: string) => invoke<void>("app.openExternal", { url }),
